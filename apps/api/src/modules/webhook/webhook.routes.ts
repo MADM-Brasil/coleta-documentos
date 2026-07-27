@@ -3,14 +3,12 @@ import path from "node:path";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../middlewares/error";
-import { requireWebhookSecret } from "../../middlewares/auth";
 import { Errors } from "../../lib/errors";
 import { generateCollectionToken } from "../../lib/token";
 import { DEFAULT_ITEMS } from "../collections/default-items";
 import { env } from "../../config/env";
 
 const router = Router();
-router.use(requireWebhookSecret);
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -58,8 +56,7 @@ router.post(
   })
 );
 
-// Permite ao Make baixar o arquivo (foto/áudio/vídeo) para anexar na Kommo,
-// Google Drive etc. Protegido pelo mesmo segredo do webhook — nunca é público.
+// Permite ao Make baixar o arquivo (foto/áudio/vídeo) para anexar na Kommo, Google Drive etc.
 router.get(
   "/media/:mediaId",
   asyncHandler(async (req, res) => {

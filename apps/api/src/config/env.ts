@@ -12,7 +12,6 @@ export const env = {
   port: Number(process.env.PORT ?? 4000),
   appUrl: required("APP_URL", "http://localhost:4000"),
   clientUrl: required("CLIENT_URL", "http://localhost:5173"),
-  webhookSecret: required("WEBHOOK_SECRET", "dev-webhook-secret-change-me"),
   storageProvider: process.env.STORAGE_PROVIDER ?? "LOCAL",
   uploadsDir: process.env.UPLOADS_DIR ?? "./uploads",
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB ?? 200),

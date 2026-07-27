@@ -1,5 +1,6 @@
 import { Router } from "express";
 import path from "node:path";
+import fs from "node:fs";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../middlewares/error";
@@ -65,6 +66,14 @@ router.get(
     if (!media || media.status === "DELETED") throw Errors.notFound("Mídia não encontrada.");
 
     const filePath = path.resolve(process.cwd(), env.uploadsDir, media.storageKey);
+    if (!fs.existsSync(filePath)) {
+      // Plano gratuito do Render não tem disco persistente: o arquivo pode ter sido
+      // apagado num redeploy/reinício do servidor depois do upload.
+      throw Errors.notFound(
+        "O arquivo não está mais disponível no servidor (provavelmente foi perdido num reinício). Peça para o cliente reenviar o documento."
+      );
+    }
+
     res.setHeader("Content-Type", media.mimeType);
     res.setHeader("Content-Disposition", `attachment; filename="${media.originalFilename}"`);
     res.sendFile(filePath);

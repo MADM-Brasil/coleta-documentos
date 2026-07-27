@@ -4,7 +4,9 @@ import { env } from "../../config/env";
 // tipo: "RG" | "COMPROVANTE" | "AUDIO" | "VIDEO" (por documento) | "CONCLUIDO" (coleta finalizada)
 export interface CallbackPayload {
   tipo: string;
-  leadId: string | null;
+  // Número quando o externalId é numérico (ex: ID de lead da Kommo) — APIs de CRM
+  // costumam validar o tipo do campo, e mandar como texto ("123") pode ser rejeitado.
+  leadId: string | number | null;
   link: string;
 }
 
@@ -18,9 +20,12 @@ export async function notifyCallback(collectionRequestId: string, tipo: string, 
   });
   if (!collection?.callbackUrl) return;
 
+  const externalId = collection.client.externalId;
+  const leadId = externalId && /^\d+$/.test(externalId) ? Number(externalId) : externalId;
+
   const payload: CallbackPayload = {
     tipo,
-    leadId: collection.client.externalId,
+    leadId,
     link,
   };
 

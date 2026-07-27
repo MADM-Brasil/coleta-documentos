@@ -1,0 +1,123 @@
+// PostgreSQL (Render/Railway/qualquer provedor gerenciado).
+// Os campos de status/tipo abaixo são String (não enum nativo) para manter
+// compatibilidade com o SQLite usado durante o desenvolvimento inicial —
+// os valores possíveis estão documentados nos comentários de cada campo.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// CollectionStatus: CREATED | SENT | OPENED | IN_PROGRESS | COMPLETED | EXPIRED | CANCELLED
+// CollectionItemType: ID_DOCUMENT | PROOF_OF_ADDRESS | ACCIDENT_AUDIO | LIMITATION_VIDEO
+// CollectionItemStatus: PENDING | UPLOADED
+// MediaStatus: PENDING | UPLOADED | FAILED | DELETED | REPLACED
+// ActorType: CLIENT | SYSTEM
+
+model Client {
+  id         String   @id @default(uuid())
+  name       String
+  phone      String?
+  email      String?
+  externalId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  collectionRequests CollectionRequest[]
+
+  @@map("clients")
+}
+
+model CollectionRequest {
+  id          String    @id @default(uuid())
+  clientId    String
+  tokenHash   String    @unique
+  status      String    @default("CREATED")
+  // URL de webhook (ex: gatilho "Custom Webhook" do Make) para onde o sistema
+  // notifica em tempo real cada documento enviado e a conclusão da coleta.
+  callbackUrl String?
+  expiresAt   DateTime
+  openedAt    DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  items  CollectionItem[]
+  events CollectionEvent[]
+
+  @@map("collection_requests")
+}
+
+model CollectionItem {
+  id                  String   @id @default(uuid())
+  collectionRequestId String
+  type                String
+  title               String
+  description         String?
+  instructions        String?
+  required            Boolean  @default(true)
+  status              String   @default("PENDING")
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  collectionRequest CollectionRequest @relation(fields: [collectionRequestId], references: [id])
+  mediaFiles        MediaFile[]
+
+  @@map("collection_items")
+}
+
+model MediaFile {
+  id               String    @id @default(uuid())
+  collectionItemId String
+  storageProvider  String    @default("LOCAL")
+  storageKey       String
+  url              String?
+  mimeType         String
+  fileSize         Int
+  originalFilename String
+  duration         Float?
+  status           String    @default("PENDING")
+  createdAt        DateTime  @default(now())
+
+  collectionItem CollectionItem @relation(fields: [collectionItemId], references: [id])
+
+  @@map("media_files")
+}
+
+model CollectionEvent {
+  id                  String   @id @default(uuid())
+  collectionRequestId String
+  eventType           String
+  actorType           String   @default("SYSTEM")
+  metadata            String?
+  createdAt           DateTime @default(now())
+
+  collectionRequest CollectionRequest @relation(fields: [collectionRequestId], references: [id])
+
+  @@map("collection_events")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actor     String?
+  action    String
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}

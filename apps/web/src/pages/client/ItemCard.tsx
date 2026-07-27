@@ -18,14 +18,14 @@ import { publicApi, extractErrorMessage } from "../../lib/api";
 import type { ClientItem } from "./types";
 
 const ICONS: Record<ClientItem["type"], typeof IdCard> = {
-  ID_DOCUMENT: IdCard,
-  PROOF_OF_ADDRESS: FileImage,
-  ACCIDENT_AUDIO: Mic,
-  LIMITATION_VIDEO: Video,
+  RG: IdCard,
+  COMPROVANTE: FileImage,
+  AUDIO: Mic,
+  VIDEO: Video,
 };
 
-const isVideoType = (type: ClientItem["type"]) => type === "LIMITATION_VIDEO";
-const isAudioType = (type: ClientItem["type"]) => type === "ACCIDENT_AUDIO";
+const isVideoType = (type: ClientItem["type"]) => type === "VIDEO";
+const isAudioType = (type: ClientItem["type"]) => type === "AUDIO";
 
 interface ItemCardProps {
   token: string;

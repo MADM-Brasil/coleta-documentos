@@ -48,6 +48,7 @@ router.post(
     });
 
     res.status(201).json({
+      tipo: "LINK",
       collectionId: collection.id,
       token: raw,
       link: `${env.clientUrl}/coleta/${raw}`,

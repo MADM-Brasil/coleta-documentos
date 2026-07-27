@@ -6,7 +6,7 @@ export interface ClientMedia {
 
 export interface ClientItem {
   id: string;
-  type: "ID_DOCUMENT" | "PROOF_OF_ADDRESS" | "ACCIDENT_AUDIO" | "LIMITATION_VIDEO";
+  type: "RG" | "COMPROVANTE" | "AUDIO" | "VIDEO";
   title: string;
   description: string | null;
   instructions: string | null;

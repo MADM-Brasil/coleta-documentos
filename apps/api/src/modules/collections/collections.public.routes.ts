@@ -146,17 +146,10 @@ router.post(
     }
 
     // Dispara em segundo plano — não atrasa a resposta ao cliente esperando o Make responder.
-    void notifyCallback(req.collectionRequestId!, "media:uploaded", {
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      status: "UPLOADED",
-      mediaId: media.id,
-      mimeType: media.mimeType,
-      filename: media.originalFilename,
-    });
+    const downloadUrl = `${env.appUrl}/webhook/media/${media.id}`;
+    void notifyCallback(req.collectionRequestId!, item.type, downloadUrl);
     if (collectionStatus === "COMPLETED") {
-      void notifyCallback(req.collectionRequestId!, "collection:completed");
+      void notifyCallback(req.collectionRequestId!, "CONCLUIDO", downloadUrl);
     }
 
     res.status(201).json({ media, itemStatus: "UPLOADED", collectionStatus });

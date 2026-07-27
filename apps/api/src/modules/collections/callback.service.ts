@@ -1,39 +1,17 @@
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 
+// tipo: "RG" | "COMPROVANTE" | "AUDIO" | "VIDEO" (por documento) | "CONCLUIDO" (coleta finalizada)
 export interface CallbackPayload {
-  event: string;
-  collectionId: string;
-  externalId: string | null;
-  clientName: string;
-  status: string;
-  item?: {
-    id: string;
-    type: string;
-    title: string;
-    status: string;
-    mediaId: string;
-    downloadUrl: string;
-    mimeType: string;
-    filename: string;
-  };
-  timestamp: string;
-}
-
-interface ItemInfo {
-  id: string;
-  type: string;
-  title: string;
-  status: string;
-  mediaId: string;
-  mimeType: string;
-  filename: string;
+  tipo: string;
+  leadId: string | null;
+  link: string;
 }
 
 // Notifica o Make/Kommo em tempo real quando algo acontece na coleta
 // (documento enviado, coleta concluída). Nunca deve travar o fluxo do cliente:
 // falha de rede aqui é apenas registrada, o upload já foi confirmado antes disso.
-export async function notifyCallback(collectionRequestId: string, event: string, itemInfo?: ItemInfo) {
+export async function notifyCallback(collectionRequestId: string, tipo: string, link: string) {
   const collection = await prisma.collectionRequest.findUnique({
     where: { id: collectionRequestId },
     include: { client: true },
@@ -41,24 +19,9 @@ export async function notifyCallback(collectionRequestId: string, event: string,
   if (!collection?.callbackUrl) return;
 
   const payload: CallbackPayload = {
-    event,
-    collectionId: collection.id,
-    externalId: collection.client.externalId,
-    clientName: collection.client.name,
-    status: collection.status,
-    item: itemInfo
-      ? {
-          id: itemInfo.id,
-          type: itemInfo.type,
-          title: itemInfo.title,
-          status: itemInfo.status,
-          mediaId: itemInfo.mediaId,
-          downloadUrl: `${env.appUrl}/webhook/media/${itemInfo.mediaId}`,
-          mimeType: itemInfo.mimeType,
-          filename: itemInfo.filename,
-        }
-      : undefined,
-    timestamp: new Date().toISOString(),
+    tipo,
+    leadId: collection.client.externalId,
+    link,
   };
 
   try {
@@ -69,9 +32,9 @@ export async function notifyCallback(collectionRequestId: string, event: string,
       signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) {
-      console.error(`[callback] ${collection.callbackUrl} respondeu ${response.status} para o evento ${event}`);
+      console.error(`[callback] ${collection.callbackUrl} respondeu ${response.status} para o tipo ${tipo}`);
     }
   } catch (err) {
-    console.error(`[callback] falha ao notificar ${collection.callbackUrl} (evento ${event}):`, err);
+    console.error(`[callback] falha ao notificar ${collection.callbackUrl} (tipo ${tipo}):`, err);
   }
 }

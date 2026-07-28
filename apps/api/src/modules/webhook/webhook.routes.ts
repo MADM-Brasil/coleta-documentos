@@ -66,6 +66,10 @@ router.get(
     const media = await prisma.mediaFile.findUnique({ where: { id: req.params.mediaId } });
     if (!media || media.status === "DELETED") throw Errors.notFound("Mídia não encontrada.");
 
+    if (media.url) {
+      return res.redirect(media.url);
+    }
+
     if (env.storageProvider === "R2") {
       const signedUrl = await storageService.getSignedUrl(media.storageKey);
       return res.redirect(signedUrl);

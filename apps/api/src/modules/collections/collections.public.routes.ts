@@ -107,13 +107,16 @@ router.post(
     });
 
     const storageKey = generateStorageKey(file.originalname);
-    await storageService.upload(file.buffer, { key: storageKey, mimeType });
+    const uploadResult = await storageService.upload(file.buffer, { key: storageKey, mimeType });
 
     const media = await prisma.mediaFile.create({
       data: {
         collectionItemId: item.id,
         storageProvider: env.storageProvider,
-        storageKey,
+        storageKey: uploadResult.key,
+        // Provedores como Cloudinary já devolvem uma URL pública e permanente no upload —
+        // guardamos ela aqui para usar direto, sem depender do nosso servidor depois.
+        url: env.storageProvider === "CLOUDINARY" ? uploadResult.url : null,
         mimeType,
         fileSize: file.size,
         originalFilename: file.originalname,
@@ -148,7 +151,7 @@ router.post(
     // Dispara em segundo plano — não atrasa a resposta ao cliente esperando o Make responder.
     // O arquivo já vai embutido em base64 (quando não for grande demais) para o Make
     // conseguir anexar direto na Kommo sem depender de buscar depois.
-    const downloadUrl = `${env.appUrl}/webhook/media/${media.id}`;
+    const downloadUrl = media.url ?? `${env.appUrl}/webhook/media/${media.id}`;
     void notifyCallback(req.collectionRequestId!, item.type, downloadUrl, {
       buffer: file.buffer,
       mimeType,

@@ -16,11 +16,14 @@ function resourceTypeFor(mimeType: string): "image" | "video" | "raw" {
 export class CloudinaryStorageService implements StorageService {
   async upload(file: Buffer, options: UploadOptions): Promise<UploadResult> {
     const resourceType = resourceTypeFor(options.mimeType);
+    // O Cloudinary já anexa a extensão certa sozinho (baseado no conteúdo) —
+    // tirar a extensão do nosso key evita gerar "arquivo.png.png".
+    const publicId = options.key.replace(/\.[a-zA-Z0-9]+$/, "");
 
     const result = await new Promise<{ public_id: string; secure_url: string; bytes: number }>(
       (resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { resource_type: resourceType, public_id: options.key, folder: "forms-madm" },
+          { resource_type: resourceType, public_id: publicId, folder: "forms-madm" },
           (err, res) => {
             if (err || !res) return reject(err ?? new Error("Falha ao enviar para o Cloudinary."));
             resolve(res as any);

@@ -18,7 +18,8 @@ import { publicApi, extractErrorMessage } from "../../lib/api";
 import type { ClientItem } from "./types";
 
 const ICONS: Record<ClientItem["type"], typeof IdCard> = {
-  RG: IdCard,
+  RG_FRENTE: IdCard,
+  RG_VERSO: IdCard,
   COMPROVANTE: FileImage,
   AUDIO: Mic,
   VIDEO: Video,

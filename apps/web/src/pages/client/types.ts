@@ -6,7 +6,7 @@ export interface ClientMedia {
 
 export interface ClientItem {
   id: string;
-  type: "RG" | "COMPROVANTE" | "AUDIO" | "VIDEO";
+  type: "RG_FRENTE" | "RG_VERSO" | "COMPROVANTE" | "AUDIO" | "VIDEO";
   title: string;
   description: string | null;
   instructions: string | null;

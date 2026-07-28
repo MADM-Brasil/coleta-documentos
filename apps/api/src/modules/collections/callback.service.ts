@@ -12,6 +12,10 @@ export interface CallbackPayload {
   // costumam validar o tipo do campo, e mandar como texto ("123") pode ser rejeitado.
   leadId: string | number | null;
   link: string;
+  // Public ID exato no Cloudinary (ex: "forms-madm/RG_19151475_123") — usar no
+  // módulo "Get a Resource" do Cloudinary no Make, junto com resourceType.
+  publicId?: string;
+  resourceType?: "image" | "video" | "raw";
   // Arquivo já embutido em base64 — permite ao Make anexar direto na Kommo sem
   // precisar buscar depois (evita depender do servidor estar acordado/o arquivo
   // ainda existir num plano sem disco persistente). Ausente para arquivos grandes.
@@ -24,6 +28,13 @@ interface FileInfo {
   buffer: Buffer;
   mimeType: string;
   filename: string;
+  publicId?: string;
+}
+
+function resourceTypeFor(mimeType: string): "image" | "video" | "raw" {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/") || mimeType.startsWith("audio/")) return "video";
+  return "raw";
 }
 
 // Notifica o Make/Kommo em tempo real quando algo acontece na coleta
@@ -46,10 +57,16 @@ export async function notifyCallback(
 
   const payload: CallbackPayload = { tipo, leadId, link };
 
-  if (fileInfo && fileInfo.buffer.length <= MAX_EMBED_BYTES) {
-    payload.arquivoBase64 = fileInfo.buffer.toString("base64");
-    payload.mimeType = fileInfo.mimeType;
-    payload.nomeArquivo = fileInfo.filename;
+  if (fileInfo) {
+    if (fileInfo.publicId) {
+      payload.publicId = fileInfo.publicId;
+      payload.resourceType = resourceTypeFor(fileInfo.mimeType);
+    }
+    if (fileInfo.buffer.length <= MAX_EMBED_BYTES) {
+      payload.arquivoBase64 = fileInfo.buffer.toString("base64");
+      payload.mimeType = fileInfo.mimeType;
+      payload.nomeArquivo = fileInfo.filename;
+    }
   }
 
   try {

@@ -163,6 +163,7 @@ router.post(
       buffer: file.buffer,
       mimeType,
       filename: file.originalname,
+      publicId: env.storageProvider === "CLOUDINARY" ? media.storageKey : undefined,
     });
     if (collectionStatus === "COMPLETED") {
       void notifyCallback(req.collectionRequestId!, "CONCLUIDO", downloadUrl);

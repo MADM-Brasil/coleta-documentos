@@ -4,7 +4,7 @@ import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../middlewares/error";
 import { requireCollectionToken } from "../../middlewares/auth";
 import { Errors } from "../../lib/errors";
-import { generateStorageKey } from "../../lib/token";
+import { generateDescriptiveStorageKey } from "../../lib/token";
 import { storageService } from "../storage";
 import { recordEvent } from "./events.service";
 import { notifyCallback } from "./callback.service";
@@ -82,7 +82,10 @@ router.post(
     const file = req.file;
     if (!file) throw Errors.validation("Nenhum arquivo enviado.");
 
-    const collectionBefore = await prisma.collectionRequest.findUnique({ where: { id: req.collectionRequestId } });
+    const collectionBefore = await prisma.collectionRequest.findUnique({
+      where: { id: req.collectionRequestId },
+      include: { client: true },
+    });
     if (collectionBefore?.status === "COMPLETED") {
       throw Errors.validation("Esta coleta já foi concluída. Entre em contato com o atendimento se precisar reenviar algo.");
     }
@@ -106,7 +109,11 @@ router.post(
       data: { status: "REPLACED" },
     });
 
-    const storageKey = generateStorageKey(file.originalname);
+    const storageKey = generateDescriptiveStorageKey(
+      item.type,
+      collectionBefore!.client.externalId,
+      file.originalname
+    );
     const uploadResult = await storageService.upload(file.buffer, { key: storageKey, mimeType });
 
     const media = await prisma.mediaFile.create({

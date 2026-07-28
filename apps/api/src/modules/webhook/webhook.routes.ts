@@ -7,6 +7,7 @@ import { asyncHandler } from "../../middlewares/error";
 import { Errors } from "../../lib/errors";
 import { generateCollectionToken } from "../../lib/token";
 import { DEFAULT_ITEMS } from "../collections/default-items";
+import { storageService } from "../storage";
 import { env } from "../../config/env";
 
 const router = Router();
@@ -64,6 +65,11 @@ router.get(
   asyncHandler(async (req, res) => {
     const media = await prisma.mediaFile.findUnique({ where: { id: req.params.mediaId } });
     if (!media || media.status === "DELETED") throw Errors.notFound("Mídia não encontrada.");
+
+    if (env.storageProvider === "R2") {
+      const signedUrl = await storageService.getSignedUrl(media.storageKey);
+      return res.redirect(signedUrl);
+    }
 
     const filePath = path.resolve(process.cwd(), env.uploadsDir, media.storageKey);
     if (!fs.existsSync(filePath)) {

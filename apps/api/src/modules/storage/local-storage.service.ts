@@ -18,11 +18,9 @@ export class LocalStorageService implements StorageService {
     await fs.rm(filePath, { force: true });
   }
 
-  // Simula uma "signed URL": em dev, o próprio backend serve o arquivo por trás
-  // de autenticação (rota protegida), sem expor o diretório publicamente.
+  // Não usado no modo LOCAL — a rota /webhook/media/:mediaId lê o arquivo do disco
+  // diretamente. Existe só para satisfazer a interface comum com o R2.
   async getSignedUrl(key: string): Promise<string> {
-    return `/api/media/file/${key}`;
+    return `/webhook/media/${key}`;
   }
 }
-
-export const storageService: StorageService = new LocalStorageService();

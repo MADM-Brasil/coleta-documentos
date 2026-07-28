@@ -5,7 +5,7 @@ import { asyncHandler } from "../../middlewares/error";
 import { requireCollectionToken } from "../../middlewares/auth";
 import { Errors } from "../../lib/errors";
 import { generateStorageKey } from "../../lib/token";
-import { storageService } from "../storage/local-storage.service";
+import { storageService } from "../storage";
 import { recordEvent } from "./events.service";
 import { notifyCallback } from "./callback.service";
 import { env } from "../../config/env";
@@ -112,7 +112,7 @@ router.post(
     const media = await prisma.mediaFile.create({
       data: {
         collectionItemId: item.id,
-        storageProvider: "LOCAL",
+        storageProvider: env.storageProvider,
         storageKey,
         mimeType,
         fileSize: file.size,
@@ -146,8 +146,14 @@ router.post(
     }
 
     // Dispara em segundo plano — não atrasa a resposta ao cliente esperando o Make responder.
+    // O arquivo já vai embutido em base64 (quando não for grande demais) para o Make
+    // conseguir anexar direto na Kommo sem depender de buscar depois.
     const downloadUrl = `${env.appUrl}/webhook/media/${media.id}`;
-    void notifyCallback(req.collectionRequestId!, item.type, downloadUrl);
+    void notifyCallback(req.collectionRequestId!, item.type, downloadUrl, {
+      buffer: file.buffer,
+      mimeType,
+      filename: file.originalname,
+    });
     if (collectionStatus === "COMPLETED") {
       void notifyCallback(req.collectionRequestId!, "CONCLUIDO", downloadUrl);
     }

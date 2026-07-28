@@ -1,5 +1,9 @@
 import { prisma } from "../../lib/prisma";
-import { env } from "../../config/env";
+
+// Acima disso não embutimos o arquivo no corpo do webhook (payload ficaria grande
+// demais / arriscado de estourar limite do Make) — o Make cai no fallback de
+// buscar pelo "link" via HTTP GET nesses casos (vídeos, por exemplo).
+const MAX_EMBED_BYTES = 10 * 1024 * 1024;
 
 // tipo: "RG" | "COMPROVANTE" | "AUDIO" | "VIDEO" (por documento) | "CONCLUIDO" (coleta finalizada)
 export interface CallbackPayload {
@@ -8,12 +12,29 @@ export interface CallbackPayload {
   // costumam validar o tipo do campo, e mandar como texto ("123") pode ser rejeitado.
   leadId: string | number | null;
   link: string;
+  // Arquivo já embutido em base64 — permite ao Make anexar direto na Kommo sem
+  // precisar buscar depois (evita depender do servidor estar acordado/o arquivo
+  // ainda existir num plano sem disco persistente). Ausente para arquivos grandes.
+  arquivoBase64?: string;
+  mimeType?: string;
+  nomeArquivo?: string;
+}
+
+interface FileInfo {
+  buffer: Buffer;
+  mimeType: string;
+  filename: string;
 }
 
 // Notifica o Make/Kommo em tempo real quando algo acontece na coleta
 // (documento enviado, coleta concluída). Nunca deve travar o fluxo do cliente:
 // falha de rede aqui é apenas registrada, o upload já foi confirmado antes disso.
-export async function notifyCallback(collectionRequestId: string, tipo: string, link: string) {
+export async function notifyCallback(
+  collectionRequestId: string,
+  tipo: string,
+  link: string,
+  fileInfo?: FileInfo
+) {
   const collection = await prisma.collectionRequest.findUnique({
     where: { id: collectionRequestId },
     include: { client: true },
@@ -23,18 +44,20 @@ export async function notifyCallback(collectionRequestId: string, tipo: string, 
   const externalId = collection.client.externalId;
   const leadId = externalId && /^\d+$/.test(externalId) ? Number(externalId) : externalId;
 
-  const payload: CallbackPayload = {
-    tipo,
-    leadId,
-    link,
-  };
+  const payload: CallbackPayload = { tipo, leadId, link };
+
+  if (fileInfo && fileInfo.buffer.length <= MAX_EMBED_BYTES) {
+    payload.arquivoBase64 = fileInfo.buffer.toString("base64");
+    payload.mimeType = fileInfo.mimeType;
+    payload.nomeArquivo = fileInfo.filename;
+  }
 
   try {
     const response = await fetch(collection.callbackUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) {
       console.error(`[callback] ${collection.callbackUrl} respondeu ${response.status} para o tipo ${tipo}`);

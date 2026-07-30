@@ -15,4 +15,8 @@ export const env = {
   storageProvider: process.env.STORAGE_PROVIDER ?? "LOCAL",
   uploadsDir: process.env.UPLOADS_DIR ?? "./uploads",
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB ?? 200),
+  // Opcionais: quando ambos preenchidos, o sistema anexa o arquivo direto no lead da
+  // Kommo (nota tipo "attachment") no momento do upload, sem depender do Make pra isso.
+  kommoSubdomain: process.env.KOMMO_SUBDOMAIN,
+  kommoApiToken: process.env.KOMMO_API_TOKEN,
 };

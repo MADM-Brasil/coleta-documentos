@@ -8,6 +8,7 @@ import { generateDescriptiveStorageKey } from "../../lib/token";
 import { storageService } from "../storage";
 import { recordEvent } from "./events.service";
 import { notifyCallback } from "./callback.service";
+import { attachFileToKommoLead } from "../kommo/kommo-attachment.service";
 import { env } from "../../config/env";
 
 const router = Router();
@@ -168,6 +169,10 @@ router.post(
     if (collectionStatus === "COMPLETED") {
       void notifyCallback(req.collectionRequestId!, "CONCLUIDO", downloadUrl);
     }
+
+    // Anexa direto no lead da Kommo (nota nativa, com miniatura/download reais) quando
+    // KOMMO_SUBDOMAIN e KOMMO_API_TOKEN estiverem configurados — sem eles, não faz nada.
+    void attachFileToKommoLead(collectionBefore!.client.externalId, file.buffer, mimeType, file.originalname);
 
     res.status(201).json({ media, itemStatus: "UPLOADED", collectionStatus });
   })

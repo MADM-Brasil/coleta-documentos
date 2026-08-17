@@ -166,9 +166,6 @@ router.post(
       filename: file.originalname,
       publicId: env.storageProvider === "CLOUDINARY" ? media.storageKey : undefined,
     });
-    if (collectionStatus === "COMPLETED") {
-      void notifyCallback(req.collectionRequestId!, "CONCLUIDO", downloadUrl);
-    }
 
     // Anexa direto no lead da Kommo (nota nativa, com miniatura/download reais) quando
     // KOMMO_SUBDOMAIN e KOMMO_API_TOKEN estiverem configurados — sem eles, não faz nada.

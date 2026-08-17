@@ -38,12 +38,17 @@ router.post(
 
     const { raw, hash } = generateCollectionToken();
 
+    // Uma URL fixa configurada no servidor (DEFAULT_CALLBACK_URL) sempre tem prioridade
+    // sobre o que vier no corpo da requisição — assim o Make não precisa mais mandar
+    // "callbackUrl" a cada chamada.
+    const effectiveCallbackUrl = env.defaultCallbackUrl ?? callbackUrl;
+
     const collection = await prisma.collectionRequest.create({
       data: {
         clientId: client.id,
         tokenHash: hash,
         status: "SENT",
-        callbackUrl,
+        callbackUrl: effectiveCallbackUrl,
         expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
         items: { create: DEFAULT_ITEMS },
       },

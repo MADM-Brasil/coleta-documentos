@@ -19,4 +19,8 @@ export const env = {
   // Kommo (nota tipo "attachment") no momento do upload, sem depender do Make pra isso.
   kommoSubdomain: process.env.KOMMO_SUBDOMAIN,
   kommoApiToken: process.env.KOMMO_API_TOKEN,
+  // Quando definida, toda coleta usa essa URL fixa para os eventos em tempo real
+  // (documento enviado, coleta concluída), independente do que vier em "callbackUrl"
+  // na chamada de criação — o Make não precisa mais mandar esse campo.
+  defaultCallbackUrl: process.env.DEFAULT_CALLBACK_URL,
 };

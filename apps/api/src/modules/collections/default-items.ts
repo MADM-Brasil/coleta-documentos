@@ -1,13 +1,13 @@
 export const DEFAULT_ITEMS = [
   {
     type: "RG_FRENTE" as const,
-    title: "Documento de identificação (frente)",
+    title: "Documento de identificação (Frente)",
     description: "Envie uma foto legível da frente do seu RG ou CNH.",
     sortOrder: 1,
   },
   {
     type: "RG_VERSO" as const,
-    title: "Documento de identificação (verso)",
+    title: "Documento de identificação (Verso)",
     description: "Envie uma foto legível do verso do seu RG ou CNH.",
     sortOrder: 2,
   },

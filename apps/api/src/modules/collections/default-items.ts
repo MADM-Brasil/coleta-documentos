@@ -65,4 +65,11 @@ export const DEFAULT_ITEMS = [
     sortOrder: 10,
     multiple: true,
   },
+  {
+    type: "CAT" as const,
+    title: "CAT",
+    description: "Envie a(s) CAT em PDF. Você pode anexar mais de uma.",
+    sortOrder: 11,
+    multiple: true,
+  },
 ];

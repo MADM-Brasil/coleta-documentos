@@ -29,6 +29,7 @@ const ICONS: Record<ClientItem["type"], typeof IdCard> = {
   LAUDO_MEDICO: FileText,
   CARTA_CONCESSAO: FileText,
   COPIA_PROCESSO: FileText,
+  CAT: FileText,
 };
 
 const isVideoType = (type: ClientItem["type"]) => type === "VIDEO";

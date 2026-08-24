@@ -17,7 +17,8 @@ export interface ClientItem {
     | "CNIS"
     | "LAUDO_MEDICO"
     | "CARTA_CONCESSAO"
-    | "COPIA_PROCESSO";
+    | "COPIA_PROCESSO"
+    | "CAT";
   title: string;
   description: string | null;
   instructions: string | null;

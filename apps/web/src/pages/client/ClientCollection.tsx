@@ -138,13 +138,18 @@ export function ClientCollection() {
         </div>
 
         <div className="space-y-3">
-          {data.items.map((item, idx) =>
-            item.multiple ? (
-              <MultiItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} />
-            ) : (
-              <ItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} />
-            )
-          )}
+          {data.items.map((item, idx) => (
+            <div key={item.id}>
+              {item.type === "CTPS" && (
+                <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
+              )}
+              {item.multiple ? (
+                <MultiItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} />
+              ) : (
+                <ItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} />
+              )}
+            </div>
+          ))}
         </div>
 
         {errorMessage && (

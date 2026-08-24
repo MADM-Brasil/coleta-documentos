@@ -53,6 +53,7 @@ router.get(
         id: c.id,
         status: c.status,
         clientName: c.client.name,
+        createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         approvedCount: c.items.filter((i) => i.status === "APPROVED").length,
         totalCount: c.items.length,

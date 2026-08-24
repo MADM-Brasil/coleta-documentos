@@ -12,7 +12,8 @@ datasource db {
 }
 
 // CollectionStatus: CREATED | SENT | OPENED | IN_PROGRESS | COMPLETED | EXPIRED | CANCELLED
-// CollectionItemType: ID_DOCUMENT | PROOF_OF_ADDRESS | ACCIDENT_AUDIO | LIMITATION_VIDEO
+// CollectionItemType: RG_FRENTE | RG_VERSO | COMPROVANTE | AUDIO | VIDEO |
+//   CTPS | CNIS | LAUDO_MEDICO | CARTA_CONCESSAO | COPIA_PROCESSO
 // CollectionItemStatus: PENDING | UPLOADED
 // MediaStatus: PENDING | UPLOADED | FAILED | DELETED | REPLACED
 // ActorType: CLIENT | SYSTEM
@@ -64,6 +65,10 @@ model CollectionItem {
   required            Boolean  @default(true)
   status              String   @default("PENDING")
   sortOrder           Int      @default(0)
+  // Quando true, o cliente pode anexar vários arquivos nesse item (ex: vários
+  // laudos médicos em PDF) — o item fica "UPLOADED" a partir do 1º arquivo,
+  // mas continua aceitando mais uploads sem substituir os anteriores.
+  multiple            Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

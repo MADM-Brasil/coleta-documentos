@@ -31,4 +31,37 @@ export const DEFAULT_ITEMS = [
       "Posicione o celular de forma que seja possível visualizar seu movimento. Siga as orientações recebidas durante o atendimento.",
     sortOrder: 5,
   },
+  {
+    type: "CTPS" as const,
+    title: "Carteira de Trabalho Digital",
+    description: "Envie uma foto ou PDF da sua Carteira de Trabalho Digital.",
+    sortOrder: 6,
+  },
+  {
+    type: "CNIS" as const,
+    title: "Extrato de Contribuição (CNIS)",
+    description: "Envie uma foto ou PDF do seu extrato CNIS.",
+    sortOrder: 7,
+  },
+  {
+    type: "LAUDO_MEDICO" as const,
+    title: "Laudo Médico",
+    description: "Envie os laudos médicos em PDF. Você pode anexar mais de um.",
+    sortOrder: 8,
+    multiple: true,
+  },
+  {
+    type: "CARTA_CONCESSAO" as const,
+    title: "Carta de Concessão de Benefício",
+    description: "Envie a(s) carta(s) de concessão em PDF. Você pode anexar mais de uma.",
+    sortOrder: 9,
+    multiple: true,
+  },
+  {
+    type: "COPIA_PROCESSO" as const,
+    title: "Cópia do Processo",
+    description: "Envie os arquivos do processo em PDF. Você pode anexar mais de um.",
+    sortOrder: 10,
+    multiple: true,
+  },
 ];

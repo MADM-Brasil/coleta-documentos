@@ -3,6 +3,7 @@ import {
   Camera,
   Check,
   FileImage,
+  FileText,
   IdCard,
   ImagePlus,
   Loader2,
@@ -23,6 +24,11 @@ const ICONS: Record<ClientItem["type"], typeof IdCard> = {
   COMPROVANTE: FileImage,
   AUDIO: Mic,
   VIDEO: Video,
+  CTPS: FileText,
+  CNIS: FileText,
+  LAUDO_MEDICO: FileText,
+  CARTA_CONCESSAO: FileText,
+  COPIA_PROCESSO: FileText,
 };
 
 const isVideoType = (type: ClientItem["type"]) => type === "VIDEO";

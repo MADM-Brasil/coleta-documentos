@@ -68,6 +68,7 @@ router.get(
         instructions: item.instructions,
         required: item.required,
         status: item.status,
+        multiple: item.multiple,
         media: item.mediaFiles.filter((m) => m.status === "UPLOADED"),
       })),
     });
@@ -104,11 +105,18 @@ router.post(
     if (!ALLOWED_MIME.has(mimeType)) {
       throw Errors.invalidFileType();
     }
+    if (item.multiple && mimeType !== "application/pdf") {
+      throw Errors.validation("Este item só aceita arquivos em PDF.");
+    }
 
-    await prisma.mediaFile.updateMany({
-      where: { collectionItemId: item.id, status: "UPLOADED" },
-      data: { status: "REPLACED" },
-    });
+    // Itens de múltiplos arquivos (ex: laudos) acumulam uploads — os anteriores
+    // não são substituídos. Nos demais, o novo upload substitui o anterior.
+    if (!item.multiple) {
+      await prisma.mediaFile.updateMany({
+        where: { collectionItemId: item.id, status: "UPLOADED" },
+        data: { status: "REPLACED" },
+      });
+    }
 
     const storageKey = generateDescriptiveStorageKey(
       item.type,

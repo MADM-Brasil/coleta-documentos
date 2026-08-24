@@ -5,7 +5,8 @@ import { publicApi, extractErrorMessage } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ItemCard } from "./ItemCard";
-import type { ClientCollection as ClientCollectionData } from "./types";
+import { MultiItemCard } from "./MultiItemCard";
+import type { ClientCollection as ClientCollectionData, ClientMedia } from "./types";
 
 type Stage = "loading" | "error" | "intro" | "checklist" | "completed";
 
@@ -29,10 +30,17 @@ export function ClientCollection() {
       });
   }, [token]);
 
-  function handleUploaded(itemId: string, collectionStatus: string) {
+  function handleUploaded(itemId: string, collectionStatus: string, media?: ClientMedia) {
     setData((prev) =>
       prev
-        ? { ...prev, items: prev.items.map((i) => (i.id === itemId ? { ...i, status: "UPLOADED" } : i)) }
+        ? {
+            ...prev,
+            items: prev.items.map((i) =>
+              i.id === itemId
+                ? { ...i, status: "UPLOADED", media: media ? [...i.media, media] : i.media }
+                : i
+            ),
+          }
         : prev
     );
     if (collectionStatus === "COMPLETED") {
@@ -130,9 +138,13 @@ export function ClientCollection() {
         </div>
 
         <div className="space-y-3">
-          {data.items.map((item, idx) => (
-            <ItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} />
-          ))}
+          {data.items.map((item, idx) =>
+            item.multiple ? (
+              <MultiItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} />
+            ) : (
+              <ItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} />
+            )
+          )}
         </div>
 
         {errorMessage && (

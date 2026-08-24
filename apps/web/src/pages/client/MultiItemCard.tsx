@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Check, FileText, Loader2, Plus, Upload, X } from "lucide-react";
+import { Check, FileText, Loader2, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { publicApi, extractErrorMessage } from "../../lib/api";
 import type { ClientItem, ClientMedia } from "./types";
@@ -13,7 +13,6 @@ interface MultiItemCardProps {
 
 export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardProps) {
   const [open, setOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +35,6 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
         },
       });
       onUploaded(item.id, data.collectionStatus, data.media);
-      setAdding(false);
     } catch (err) {
       setError(extractErrorMessage(err, "Não conseguimos enviar o arquivo. Verifique se é um PDF e tente novamente."));
     } finally {
@@ -110,19 +108,12 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
                 <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${progress}%` }} />
               </div>
             </div>
-          ) : adding ? (
+          ) : (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 py-6">
-              <Upload className="h-6 w-6 text-brand-600" />
+              <FileText className="h-6 w-6 text-brand-600" />
               <Button size="md" onClick={() => fileInputRef.current?.click()}>
                 Escolher arquivo PDF
               </Button>
-              <button
-                type="button"
-                onClick={() => setAdding(false)}
-                className="flex items-center gap-1 text-sm text-slate-400"
-              >
-                <X className="h-3.5 w-3.5" /> Cancelar
-              </button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -131,21 +122,15 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
                 onChange={(e) => handleFileSelected(e.target.files)}
               />
             </div>
-          ) : (
-            <Button size="md" className="w-full" onClick={() => setAdding(true)}>
-              <Plus className="h-4 w-4" /> {item.media.length > 0 ? "Adicionar outro PDF" : "Adicionar PDF"}
-            </Button>
           )}
 
-          {!adding && (
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="mt-3 flex w-full items-center justify-center gap-1 text-sm text-slate-400"
-            >
-              <X className="h-3.5 w-3.5" /> Fechar
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="mt-3 flex w-full items-center justify-center gap-1 text-sm text-slate-400"
+          >
+            <X className="h-3.5 w-3.5" /> Fechar
+          </button>
         </div>
       )}
     </div>

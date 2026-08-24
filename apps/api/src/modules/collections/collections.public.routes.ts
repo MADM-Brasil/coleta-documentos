@@ -105,7 +105,8 @@ router.post(
     if (!ALLOWED_MIME.has(mimeType)) {
       throw Errors.invalidFileType();
     }
-    if (item.multiple && mimeType !== "application/pdf") {
+    const pdfOnly = item.multiple || item.type === "CNIS";
+    if (pdfOnly && mimeType !== "application/pdf") {
       throw Errors.validation("Este item só aceita arquivos em PDF.");
     }
 

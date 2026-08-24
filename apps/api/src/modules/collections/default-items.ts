@@ -34,13 +34,14 @@ export const DEFAULT_ITEMS = [
   {
     type: "CTPS" as const,
     title: "Carteira de Trabalho Digital",
-    description: "Envie uma foto ou PDF da sua Carteira de Trabalho Digital.",
+    description: "Envie o PDF da sua Carteira de Trabalho Digital (geralmente 2 vias).",
     sortOrder: 6,
+    multiple: true,
   },
   {
     type: "CNIS" as const,
     title: "Extrato de Contribuição (CNIS)",
-    description: "Envie uma foto ou PDF do seu extrato CNIS.",
+    description: "Envie o PDF do seu extrato CNIS.",
     sortOrder: 7,
   },
   {

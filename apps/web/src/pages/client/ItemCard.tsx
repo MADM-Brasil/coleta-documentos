@@ -33,6 +33,7 @@ const ICONS: Record<ClientItem["type"], typeof IdCard> = {
 
 const isVideoType = (type: ClientItem["type"]) => type === "VIDEO";
 const isAudioType = (type: ClientItem["type"]) => type === "AUDIO";
+const isPdfOnlyType = (type: ClientItem["type"]) => type === "CNIS";
 
 interface ItemCardProps {
   token: string;
@@ -61,6 +62,7 @@ export function ItemCard({ token, item, index, onUploaded }: ItemCardProps) {
   const done = item.status === "UPLOADED";
   const video = isVideoType(item.type);
   const audio = isAudioType(item.type);
+  const pdfOnly = isPdfOnlyType(item.type);
 
   useEffect(() => {
     return () => {
@@ -223,7 +225,23 @@ export function ItemCard({ token, item, index, onUploaded }: ItemCardProps) {
             </div>
           )}
 
-          {!previewUrl && !audio && (
+          {!previewUrl && !audio && pdfOnly && (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 py-6">
+              <FileText className="h-6 w-6 text-brand-600" />
+              <Button size="md" onClick={() => galleryInputRef.current?.click()}>
+                Escolher arquivo PDF
+              </Button>
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => handleFileSelected(e.target.files)}
+              />
+            </div>
+          )}
+
+          {!previewUrl && !audio && !pdfOnly && (
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -269,6 +287,11 @@ export function ItemCard({ token, item, index, onUploaded }: ItemCardProps) {
                   </div>
                 ) : video ? (
                   <video src={previewUrl} controls className="max-h-72 w-full" />
+                ) : pdfOnly ? (
+                  <div className="flex items-center gap-2 p-4 text-sm text-slate-700">
+                    <FileText className="h-5 w-5 shrink-0 text-brand-600" />
+                    <span className="truncate">{file?.name}</span>
+                  </div>
                 ) : (
                   <img src={previewUrl} alt="Pré-visualização" className="max-h-72 w-full object-contain" />
                 )}

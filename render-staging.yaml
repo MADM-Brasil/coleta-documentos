@@ -14,10 +14,8 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     autoDeploy: true
-    disk:
-      name: forms-madm-uploads-staging
-      mountPath: /var/data/uploads
-      sizeGB: 1
+    # Plano free do Render não suporta disco persistente — os arquivos enviados ficam
+    # só até o próximo deploy/reinício, o que é aceitável num ambiente de teste.
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -36,7 +34,7 @@ services:
       - key: STORAGE_PROVIDER
         value: LOCAL
       - key: UPLOADS_DIR
-        value: /var/data/uploads
+        value: ./uploads
       - key: MAX_FILE_SIZE_MB
         value: 200
       # Sala de atendimento (vídeo) — pode reaproveitar o mesmo projeto LiveKit da

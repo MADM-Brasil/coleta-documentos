@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import { CheckCircle2, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { publicApi, extractErrorMessage } from "../../lib/api";
+import { realtimeUrl } from "../../lib/videoApi";
 import { Button } from "../../components/ui/Button";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ItemCard } from "../client/ItemCard";
@@ -38,6 +40,41 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
         setStage("error");
       });
   }, [token]);
+
+  // Escuta aprovação/reenvio em tempo real — sem isso, o cliente só via a atualização
+  // depois de atualizar a página (o que também derrubava a chamada de vídeo).
+  useEffect(() => {
+    const socket = io(realtimeUrl, {
+      path: "/realtime",
+      query: { collectionId, token },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("document_approved", ({ itemId }: { itemId: string }) => {
+      setData((prev) =>
+        prev
+          ? { ...prev, items: prev.items.map((i) => (i.id === itemId ? { ...i, status: "APPROVED" } : i)) }
+          : prev
+      );
+    });
+
+    socket.on("document_rejected", ({ itemId, reason }: { itemId: string; reason: string }) => {
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((i) =>
+                i.id === itemId ? { ...i, status: "REJECTED", rejectionReason: reason } : i
+              ),
+            }
+          : prev
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [collectionId, token]);
 
   function handleUploaded(itemId: string, collectionStatus: string, media?: ClientMedia) {
     setData((prev) =>

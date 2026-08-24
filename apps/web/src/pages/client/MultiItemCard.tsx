@@ -81,6 +81,13 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
         </span>
       </button>
 
+      {item.status === "REJECTED" && item.rejectionReason && (
+        <div className="mx-4 mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="font-medium">Precisamos que você envie novamente.</p>
+          <p className="text-red-600">Motivo: {item.rejectionReason}</p>
+        </div>
+      )}
+
       {open && (
         <div className="border-t border-slate-100 p-4 animate-fade-in">
           {item.instructions && (

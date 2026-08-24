@@ -1,0 +1,150 @@
+import { useCallback, useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import { Loader2, PhoneIncoming, ShieldAlert } from "lucide-react";
+import { Button } from "../../components/ui/Button";
+import { videoApi, realtimeUrl } from "../../lib/videoApi";
+import { useCallSession } from "./useCallSession";
+import { ParticipantVideo } from "./components/ParticipantVideo";
+import { VideoControls } from "./components/VideoControls";
+import { ConnectionStatus } from "./components/ConnectionStatus";
+import { DocumentPanel } from "./components/DocumentPanel";
+import type { AgentCollection } from "./types";
+
+interface AgentAttendanceProps {
+  collectionId: string;
+  token: string;
+}
+
+export function AgentAttendance({ collectionId, token }: AgentAttendanceProps) {
+  const session = useCallSession({ collectionId, token, role: "AGENT" });
+  const [collection, setCollection] = useState<AgentCollection | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [finalizing, setFinalizing] = useState(false);
+
+  const loadCollection = useCallback(() => {
+    videoApi
+      .get<AgentCollection>(`/${collectionId}`, { params: { token } })
+      .then((res) => setCollection(res.data))
+      .catch(() => setLoadError("Não foi possível carregar a documentação do cliente."));
+  }, [collectionId, token]);
+
+  useEffect(() => {
+    loadCollection();
+  }, [loadCollection]);
+
+  useEffect(() => {
+    const socket: Socket = io(realtimeUrl, {
+      path: "/realtime",
+      query: { collectionId, token },
+      transports: ["websocket", "polling"],
+    });
+    socket.on("document_uploaded", loadCollection);
+    socket.on("document_approved", loadCollection);
+    socket.on("document_rejected", loadCollection);
+    return () => {
+      socket.disconnect();
+    };
+  }, [collectionId, token, loadCollection]);
+
+  async function handleApprove(itemId: string) {
+    await videoApi.post(`/${collectionId}/items/${itemId}/approve`, { token });
+    loadCollection();
+  }
+
+  async function handleReject(itemId: string, reason: string) {
+    await videoApi.post(`/${collectionId}/items/${itemId}/reject`, { token, reason });
+    loadCollection();
+  }
+
+  async function handleFinalize() {
+    setFinalizing(true);
+    try {
+      await videoApi.post(`/${collectionId}/complete`, { token });
+    } finally {
+      setFinalizing(false);
+    }
+  }
+
+  return (
+    <div className="flex h-screen w-full flex-col bg-white lg:flex-row">
+      <div className="relative flex h-[45vh] flex-col bg-slate-950 lg:h-screen lg:w-[60%]">
+        <div className="relative flex-1">
+          <ParticipantVideo
+            ref={session.remoteVideoRef}
+            label={session.clientName || "Cliente"}
+            showPlaceholder={session.callState !== "active"}
+          />
+          <audio ref={session.remoteAudioRef} autoPlay />
+
+          <div className="absolute left-4 top-4 flex gap-2">
+            <ConnectionStatus
+              label={
+                session.callState === "active"
+                  ? "Chamada em andamento"
+                  : session.peerConnected
+                  ? "Cliente conectado"
+                  : "Aguardando cliente..."
+              }
+              tone={session.callState === "active" ? "positive" : session.peerConnected ? "warning" : "neutral"}
+            />
+          </div>
+
+          <div className="absolute bottom-4 right-4 h-32 w-24 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-40 sm:w-32">
+            <ParticipantVideo ref={session.localVideoRef} label="Você" muted showPlaceholder={session.callState !== "active"} />
+          </div>
+
+          {session.callState === "incoming" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-6 text-center shadow-card">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                  <PhoneIncoming className="h-7 w-7" />
+                </div>
+                <p className="font-semibold text-slate-900">Chamada do cliente</p>
+                <Button size="lg" onClick={session.acceptCall}>
+                  Aceitar chamada
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {session.callState === "connecting" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+          )}
+
+          {session.mediaError && (
+            <div className="absolute inset-x-4 bottom-4 flex items-center gap-2 rounded-lg bg-red-600/90 px-3 py-2 text-sm text-white">
+              <ShieldAlert className="h-4 w-4 shrink-0" /> {session.mediaError}
+            </div>
+          )}
+        </div>
+
+        {session.callState === "active" && (
+          <div className="border-t border-white/10 bg-slate-950/95 px-4 py-3">
+            <VideoControls
+              micEnabled={session.micEnabled}
+              camEnabled={session.camEnabled}
+              onToggleMic={session.toggleMic}
+              onToggleCam={session.toggleCam}
+              onEndCall={session.endCall}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col lg:w-[40%]">
+        {loadError && <div className="p-4 text-sm text-red-600">{loadError}</div>}
+        {collection && (
+          <DocumentPanel
+            collection={collection}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onFinalize={handleFinalize}
+            finalizing={finalizing}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

@@ -10,6 +10,7 @@ import { recordEvent } from "./events.service";
 import { notifyCallback } from "./callback.service";
 import { attachFileToKommoLead } from "../kommo/kommo-attachment.service";
 import { env } from "../../config/env";
+import { emitToRoom } from "../video/realtime";
 
 const router = Router();
 
@@ -69,6 +70,7 @@ router.get(
         required: item.required,
         status: item.status,
         multiple: item.multiple,
+        rejectionReason: item.rejectionReason,
         media: item.mediaFiles.filter((m) => m.status === "UPLOADED"),
       })),
     });
@@ -141,7 +143,13 @@ router.post(
       },
     });
 
-    await prisma.collectionItem.update({ where: { id: item.id }, data: { status: "UPLOADED" } });
+    // Limpa o motivo de reenvio (se o consultor tinha recusado esse item antes) — o
+    // status volta a UPLOADED normalmente, sem afetar o fluxo de webhook abaixo.
+    await prisma.collectionItem.update({
+      where: { id: item.id },
+      data: { status: "UPLOADED", rejectionReason: null },
+    });
+    emitToRoom(req.collectionRequestId!, "document_uploaded", { itemId: item.id });
 
     await recordEvent(req.collectionRequestId!, "media:uploaded", "CLIENT", {
       itemId: item.id,
@@ -205,6 +213,7 @@ router.post(
       data: { status: "COMPLETED", completedAt: new Date() },
     });
     await recordEvent(collection.id, "collection:completed", "CLIENT");
+    emitToRoom(collection.id, "collection_completed");
 
     res.json({ collectionStatus: "COMPLETED" });
   })

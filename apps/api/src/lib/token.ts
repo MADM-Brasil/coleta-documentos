@@ -6,6 +6,10 @@ export function generateCollectionToken() {
   return { raw, hash };
 }
 
+// Mesmo formato do token de cliente, mas gerado separadamente para a sala de
+// atendimento (vídeo) — token do consultor, guardado em agentTokenHash.
+export const generateAgentToken = generateCollectionToken;
+
 export function hashToken(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");
 }

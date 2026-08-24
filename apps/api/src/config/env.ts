@@ -23,4 +23,10 @@ export const env = {
   // (documento enviado, coleta concluída), independente do que vier em "callbackUrl"
   // na chamada de criação — o Make não precisa mais mandar esse campo.
   defaultCallbackUrl: process.env.DEFAULT_CALLBACK_URL,
+  // Sala de atendimento (vídeo, LiveKit). Opcionais: se ausentes, os endpoints de
+  // vídeo respondem 503 mas o resto do sistema (formulário, upload, webhook Make)
+  // continua funcionando normalmente.
+  livekitApiKey: process.env.LIVEKIT_API_KEY,
+  livekitApiSecret: process.env.LIVEKIT_API_SECRET,
+  livekitUrl: process.env.LIVEKIT_URL,
 };

@@ -176,13 +176,24 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
         {!done && (
           <span
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
-              missing ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+              item.status === "REJECTED"
+                ? "bg-red-100 text-red-700"
+                : missing
+                ? "bg-red-100 text-red-700"
+                : "bg-slate-100 text-slate-600"
             }`}
           >
-            Enviar
+            {item.status === "REJECTED" ? "Enviar novamente" : "Enviar"}
           </span>
         )}
       </button>
+
+      {item.status === "REJECTED" && item.rejectionReason && (
+        <div className="mx-4 mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="font-medium">Precisamos que você envie novamente.</p>
+          <p className="text-red-600">Motivo: {item.rejectionReason}</p>
+        </div>
+      )}
 
       {open && !done && (
         <div className="border-t border-slate-100 p-4 animate-fade-in">

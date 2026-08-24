@@ -7,6 +7,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/public": "http://localhost:4000",
+      "/api": "http://localhost:4000",
+      "/realtime": { target: "ws://localhost:4000", ws: true },
     },
   },
 });

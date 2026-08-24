@@ -23,8 +23,9 @@ export interface ClientItem {
   description: string | null;
   instructions: string | null;
   required: boolean;
-  status: "PENDING" | "UPLOADED";
+  status: "PENDING" | "UPLOADED" | "APPROVED" | "REJECTED";
   multiple: boolean;
+  rejectionReason?: string | null;
   media: ClientMedia[];
 }
 

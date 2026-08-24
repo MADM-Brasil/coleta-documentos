@@ -14,7 +14,7 @@ datasource db {
 // CollectionStatus: CREATED | SENT | OPENED | IN_PROGRESS | COMPLETED | EXPIRED | CANCELLED
 // CollectionItemType: RG_FRENTE | RG_VERSO | COMPROVANTE | AUDIO | VIDEO |
 //   CTPS | CNIS | LAUDO_MEDICO | CARTA_CONCESSAO | COPIA_PROCESSO | CAT
-// CollectionItemStatus: PENDING | UPLOADED
+// CollectionItemStatus: PENDING | UPLOADED | APPROVED | REJECTED
 // MediaStatus: PENDING | UPLOADED | FAILED | DELETED | REPLACED
 // ActorType: CLIENT | SYSTEM
 
@@ -36,6 +36,10 @@ model CollectionRequest {
   id          String    @id @default(uuid())
   clientId    String
   tokenHash   String    @unique
+  // Token do consultor para a sala de atendimento (vídeo). Nullable porque coletas
+  // criadas antes dessa feature não têm — o link antigo /coleta/:token continua
+  // funcionando normalmente sem ele.
+  agentTokenHash String? @unique
   status      String    @default("CREATED")
   // URL de webhook (ex: gatilho "Custom Webhook" do Make) para onde o sistema
   // notifica em tempo real cada documento enviado e a conclusão da coleta.
@@ -69,6 +73,9 @@ model CollectionItem {
   // laudos médicos em PDF) — o item fica "UPLOADED" a partir do 1º arquivo,
   // mas continua aceitando mais uploads sem substituir os anteriores.
   multiple            Boolean  @default(false)
+  // Preenchido pelo consultor ao solicitar reenvio (ex: "Imagem cortada"). Limpo
+  // quando o cliente envia um novo arquivo para o item.
+  rejectionReason     String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

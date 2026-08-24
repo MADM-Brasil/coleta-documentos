@@ -184,7 +184,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
               screenShareEnabled={session.screenShareEnabled}
               onToggleMic={session.toggleMic}
               onToggleCam={session.toggleCam}
-              onToggleScreenShare={session.toggleScreenShare}
+              onToggleScreenShare={session.screenShareSupported ? session.toggleScreenShare : undefined}
               onEndCall={session.endCall}
             />
           </div>

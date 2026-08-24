@@ -19,6 +19,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const [screenShareEnabled, setScreenShareEnabled] = useState(false);
+  // A maioria dos navegadores mobile (especialmente Safari/iOS) não suporta
+  // compartilhar tela numa página web comum — escondemos o botão nesses casos
+  // em vez de deixar um controle que não funciona.
+  const [screenShareSupported] = useState(() => Boolean(navigator.mediaDevices?.getDisplayMedia));
   // true quando o OUTRO participante está compartilhando a tela — o vídeo principal
   // passa a mostrar a tela dele em vez da câmera enquanto isso durar.
   const [remoteScreenSharing, setRemoteScreenSharing] = useState(false);
@@ -196,11 +200,17 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
 
   async function toggleScreenShare() {
     const next = !screenShareEnabled;
+    if (next && !navigator.mediaDevices?.getDisplayMedia) {
+      setMediaError("Esse navegador/dispositivo não permite compartilhar a tela (comum em celulares).");
+      return;
+    }
     try {
       await roomRef.current?.localParticipant.setScreenShareEnabled(next, { audio: true });
       setScreenShareEnabled(next);
+      setMediaError(null);
     } catch {
-      /* usuário cancelou o seletor de tela do navegador, ou o navegador não suporta — ignora */
+      // Se o usuário só fechou o seletor de tela sem escolher nada, não é erro de verdade.
+      if (next) setMediaError("Não foi possível compartilhar a tela. Verifique as permissões do navegador.");
     }
   }
 
@@ -210,6 +220,7 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     micEnabled,
     camEnabled,
     screenShareEnabled,
+    screenShareSupported,
     remoteScreenSharing,
     mediaError,
     connectionError,

@@ -61,7 +61,7 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const Icon = ICONS[item.type];
-  const done = item.status === "UPLOADED";
+  const done = item.status === "UPLOADED" || item.status === "APPROVED";
   const video = isVideoType(item.type);
   const audio = isAudioType(item.type);
   const pdfOnly = isPdfOnlyType(item.type);

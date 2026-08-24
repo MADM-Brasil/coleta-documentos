@@ -19,7 +19,7 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const done = item.status === "UPLOADED";
+  const done = item.status === "UPLOADED" || item.status === "APPROVED";
 
   async function handleFileSelected(selected: FileList | null) {
     const file = selected?.[0];

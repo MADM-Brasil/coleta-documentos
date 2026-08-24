@@ -12,6 +12,7 @@ interface MultiItemCardProps {
 }
 
 export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardProps) {
+  const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -52,7 +53,11 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
-      <div className="flex items-center gap-4 p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-4 p-4 text-left active:bg-slate-50"
+      >
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
             done ? "bg-emerald-100 text-emerald-600" : "bg-brand-50 text-brand-600"
@@ -68,66 +73,81 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
               : item.description}
           </p>
         </div>
-      </div>
+        <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+          {item.media.length > 0 ? "Adicionar" : "Enviar"}
+        </span>
+      </button>
 
-      <div className="border-t border-slate-100 p-4">
-        {item.instructions && (
-          <div className="mb-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">{item.instructions}</div>
-        )}
+      {open && (
+        <div className="border-t border-slate-100 p-4 animate-fade-in">
+          {item.instructions && (
+            <div className="mb-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">{item.instructions}</div>
+          )}
 
-        {item.media.length > 0 && (
-          <ul className="mb-3 space-y-2">
-            {item.media.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+          {item.media.length > 0 && (
+            <ul className="mb-3 space-y-2">
+              {item.media.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-brand-600" />
+                  <span className="truncate">{m.originalFilename}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+
+          {uploading ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
+                Enviando... {progress}%
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          ) : adding ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 py-6">
+              <Upload className="h-6 w-6 text-brand-600" />
+              <Button size="md" onClick={() => fileInputRef.current?.click()}>
+                Escolher arquivo PDF
+              </Button>
+              <button
+                type="button"
+                onClick={() => setAdding(false)}
+                className="flex items-center gap-1 text-sm text-slate-400"
               >
-                <FileText className="h-4 w-4 shrink-0 text-brand-600" />
-                <span className="truncate">{m.originalFilename}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-
-        {uploading ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
-              Enviando... {progress}%
+                <X className="h-3.5 w-3.5" /> Cancelar
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => handleFileSelected(e.target.files)}
+              />
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-        ) : adding ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 py-6">
-            <Upload className="h-6 w-6 text-brand-600" />
-            <Button size="md" onClick={() => fileInputRef.current?.click()}>
-              Escolher arquivo PDF
+          ) : (
+            <Button size="md" className="w-full" onClick={() => setAdding(true)}>
+              <Plus className="h-4 w-4" /> {item.media.length > 0 ? "Adicionar outro PDF" : "Adicionar PDF"}
             </Button>
+          )}
+
+          {!adding && (
             <button
               type="button"
-              onClick={() => setAdding(false)}
-              className="flex items-center gap-1 text-sm text-slate-400"
+              onClick={() => setOpen(false)}
+              className="mt-3 flex w-full items-center justify-center gap-1 text-sm text-slate-400"
             >
-              <X className="h-3.5 w-3.5" /> Cancelar
+              <X className="h-3.5 w-3.5" /> Fechar
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e) => handleFileSelected(e.target.files)}
-            />
-          </div>
-        ) : (
-          <Button variant="outline" size="md" className="w-full" onClick={() => setAdding(true)}>
-            <Plus className="h-4 w-4" /> {item.media.length > 0 ? "Adicionar outro PDF" : "Adicionar PDF"}
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

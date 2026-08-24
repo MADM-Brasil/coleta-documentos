@@ -24,6 +24,10 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   const [loadError, setLoadError] = useState("");
   const [finalizing, setFinalizing] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
+  const [pipError, setPipError] = useState<string | null>(null);
+  function setMediaErrorLocal(msg: string) {
+    setPipError(msg);
+  }
   // PiP nativo do navegador só mostra UM <video> — pra caber cliente + consultor na
   // janela flutuante, compõe os dois num canvas (desenhado a cada frame) e usa esse
   // canvas como fonte de um <video> escondido, que é esse que vai pro PiP de verdade.
@@ -91,6 +95,10 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
         await document.exitPictureInPicture();
         return;
       }
+      if (!document.pictureInPictureEnabled) {
+        setMediaErrorLocal("Esse navegador não suporta janela flutuante (Picture-in-Picture).");
+        return;
+      }
       const canvas = pipCanvasRef.current;
       const pipVideo = pipVideoRef.current;
       const remote = session.remoteVideoRef.current;
@@ -122,14 +130,21 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
         pipRafRef.current = requestAnimationFrame(draw);
       }
 
-      const stream = canvas.captureStream(25);
-      pipVideo.srcObject = stream;
-      await pipVideo.play();
+      // Desenha um frame antes de capturar o stream, pra garantir que o vídeo já
+      // nasce com conteúdo real (não em branco) e o navegador aceite o PiP de cara.
       draw();
+
+      if (!pipVideo.srcObject) {
+        pipVideo.srcObject = canvas.captureStream(25);
+      }
+      await pipVideo.play();
       await pipVideo.requestPictureInPicture();
       pipVideo.addEventListener("leavepictureinpicture", stopPipCompositing, { once: true });
-    } catch {
-      /* navegador pode bloquear PiP (sem interação do usuário, sem suporte etc.) — ignora silenciosamente */
+    } catch (err) {
+      console.error("PiP falhou:", err);
+      setMediaErrorLocal(
+        err instanceof Error ? `Não foi possível abrir a janela flutuante: ${err.message}` : "Não foi possível abrir a janela flutuante."
+      );
     }
   }
 
@@ -216,9 +231,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             </div>
           )}
 
-          {session.mediaError && (
+          {(session.mediaError || pipError) && (
             <div className="absolute inset-x-4 bottom-4 flex items-center gap-2 rounded-lg bg-red-600/90 px-3 py-2 text-sm text-white">
-              <ShieldAlert className="h-4 w-4 shrink-0" /> {session.mediaError}
+              <ShieldAlert className="h-4 w-4 shrink-0" /> {session.mediaError || pipError}
             </div>
           )}
         </div>

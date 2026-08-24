@@ -127,7 +127,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
         screenShareEnabled={session.screenShareEnabled}
         onToggleMic={session.toggleMic}
         onToggleCam={session.toggleCam}
-        onToggleScreenShare={session.screenShareSupported ? session.toggleScreenShare : undefined}
+        onToggleScreenShare={session.toggleScreenShare}
         onEndCall={session.endCall}
       />
     </div>

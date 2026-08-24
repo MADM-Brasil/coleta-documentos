@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { Loader2, PhoneIncoming, ShieldAlert } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { videoApi, realtimeUrl } from "../../lib/videoApi";
+import { getAgentSession } from "../../lib/agentAuth";
 import { useCallSession } from "./useCallSession";
 import { ParticipantVideo } from "./components/ParticipantVideo";
 import { VideoControls } from "./components/VideoControls";
@@ -12,21 +13,20 @@ import type { AgentCollection } from "./types";
 
 interface AgentAttendanceProps {
   collectionId: string;
-  token: string;
 }
 
-export function AgentAttendance({ collectionId, token }: AgentAttendanceProps) {
-  const session = useCallSession({ collectionId, token, role: "AGENT" });
+export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
+  const session = useCallSession({ collectionId, role: "AGENT" });
   const [collection, setCollection] = useState<AgentCollection | null>(null);
   const [loadError, setLoadError] = useState("");
   const [finalizing, setFinalizing] = useState(false);
 
   const loadCollection = useCallback(() => {
     videoApi
-      .get<AgentCollection>(`/${collectionId}`, { params: { token } })
+      .get<AgentCollection>(`/${collectionId}`)
       .then((res) => setCollection(res.data))
       .catch(() => setLoadError("Não foi possível carregar a documentação do cliente."));
-  }, [collectionId, token]);
+  }, [collectionId]);
 
   useEffect(() => {
     loadCollection();
@@ -35,7 +35,7 @@ export function AgentAttendance({ collectionId, token }: AgentAttendanceProps) {
   useEffect(() => {
     const socket: Socket = io(realtimeUrl, {
       path: "/realtime",
-      query: { collectionId, token },
+      query: { collectionId, agentSession: getAgentSession() ?? "" },
       transports: ["websocket", "polling"],
     });
     socket.on("document_uploaded", loadCollection);
@@ -44,22 +44,22 @@ export function AgentAttendance({ collectionId, token }: AgentAttendanceProps) {
     return () => {
       socket.disconnect();
     };
-  }, [collectionId, token, loadCollection]);
+  }, [collectionId, loadCollection]);
 
   async function handleApprove(itemId: string) {
-    await videoApi.post(`/${collectionId}/items/${itemId}/approve`, { token });
+    await videoApi.post(`/${collectionId}/items/${itemId}/approve`);
     loadCollection();
   }
 
   async function handleReject(itemId: string, reason: string) {
-    await videoApi.post(`/${collectionId}/items/${itemId}/reject`, { token, reason });
+    await videoApi.post(`/${collectionId}/items/${itemId}/reject`, { reason });
     loadCollection();
   }
 
   async function handleFinalize() {
     setFinalizing(true);
     try {
-      await videoApi.post(`/${collectionId}/complete`, { token });
+      await videoApi.post(`/${collectionId}/complete`);
     } finally {
       setFinalizing(false);
     }

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { Errors } from "../lib/errors";
 import { prisma } from "../lib/prisma";
 import { hashToken } from "../lib/token";
+import { verifyAgentSessionToken } from "../lib/agent-session";
 
 export type SessionRole = "CLIENT" | "AGENT";
 
@@ -55,4 +56,22 @@ export async function requireSessionToken(req: Request, _res: Response, next: Ne
 export function requireAgent(req: Request, _res: Response, next: NextFunction) {
   if (req.sessionRole !== "AGENT") return next(Errors.forbidden("Ação restrita ao consultor."));
   next();
+}
+
+// Autoriza QUALQUER coleta pra quem estiver logado no painel do consultor (senha
+// compartilhada da equipe — sem link/token por coleta), OU o cliente dono do link
+// daquela coleta específica (fluxo antigo, token na query/body). O consultor não
+// precisa mais de um agentLink único por coleta.
+export async function requireRoomAccess(req: Request, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const agentToken = authHeader.slice("Bearer ".length);
+    if (!verifyAgentSessionToken(agentToken)) {
+      return next(Errors.unauthorized("Sessão do consultor expirada. Faça login novamente."));
+    }
+    req.sessionCollectionId = req.params.collectionId;
+    req.sessionRole = "AGENT";
+    return next();
+  }
+  return requireSessionToken(req, _res, next);
 }

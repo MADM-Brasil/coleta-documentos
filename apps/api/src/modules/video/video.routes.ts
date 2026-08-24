@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { asyncHandler } from "../../middlewares/error";
-import { requireSessionToken, requireAgent } from "../../middlewares/session-auth";
+import { requireRoomAccess, requireAgent } from "../../middlewares/session-auth";
 import { Errors } from "../../lib/errors";
 import { recordEvent } from "../collections/events.service";
 import { createLiveKitToken, isLiveKitConfigured, roomNameFor } from "./livekit.service";
@@ -15,7 +15,7 @@ const router = Router();
 // /webhook/* ou /public/collections/* (upload, callback ao Make continuam intactos).
 router.post(
   "/:collectionId/token",
-  requireSessionToken,
+  requireRoomAccess,
   asyncHandler(async (req, res) => {
     if (!isLiveKitConfigured()) {
       throw Errors.validation("Videochamada ainda não configurada no servidor.");
@@ -49,7 +49,7 @@ router.post(
 // Visão da coleta para o consultor (o cliente já tem GET /public/collections/:token).
 router.get(
   "/:collectionId",
-  requireSessionToken,
+  requireRoomAccess,
   requireAgent,
   asyncHandler(async (req, res) => {
     const collection = await prisma.collectionRequest.findUnique({
@@ -83,7 +83,7 @@ const rejectSchema = z.object({ reason: z.string().min(1).max(300) });
 
 router.post(
   "/:collectionId/items/:itemId/approve",
-  requireSessionToken,
+  requireRoomAccess,
   requireAgent,
   asyncHandler(async (req, res) => {
     const item = await prisma.collectionItem.findFirst({
@@ -107,7 +107,7 @@ router.post(
 
 router.post(
   "/:collectionId/items/:itemId/reject",
-  requireSessionToken,
+  requireRoomAccess,
   requireAgent,
   asyncHandler(async (req, res) => {
     const { reason } = rejectSchema.parse(req.body);
@@ -132,7 +132,7 @@ router.post(
 // Envio" do cliente (rota /public/collections/:token/finish), para não alterar o fluxo atual.
 router.post(
   "/:collectionId/complete",
-  requireSessionToken,
+  requireRoomAccess,
   requireAgent,
   asyncHandler(async (req, res) => {
     emitToRoom(req.sessionCollectionId!, "collection_completed");

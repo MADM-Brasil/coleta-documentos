@@ -2,6 +2,7 @@ import http from "node:http";
 import { Server, Socket } from "socket.io";
 import { env } from "../../config/env";
 import { resolveSessionToken, SessionRole } from "../../middlewares/session-auth";
+import { verifyAgentSessionToken } from "../../lib/agent-session";
 
 // Camada nova, isolada: não substitui nem interfere no webhook do Make (callback.service.ts).
 // Serve apenas para sincronizar em tempo real o que acontece na sala de atendimento
@@ -33,7 +34,16 @@ export function initRealtime(httpServer: http.Server) {
   });
 
   io.use(async (socket, next) => {
-    const { collectionId, token } = socket.handshake.query as { collectionId?: string; token?: string };
+    const { collectionId, token, agentSession } = socket.handshake.query as {
+      collectionId?: string;
+      token?: string;
+      agentSession?: string;
+    };
+    if (agentSession) {
+      if (!verifyAgentSessionToken(agentSession) || !collectionId) return next(new Error("unauthorized"));
+      (socket.data as SocketData) = { collectionId, role: "AGENT" };
+      return next();
+    }
     const resolved = await resolveSessionToken(collectionId, token);
     if (!resolved) return next(new Error("unauthorized"));
     (socket.data as SocketData) = resolved;

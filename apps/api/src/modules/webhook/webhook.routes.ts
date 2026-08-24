@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../middlewares/error";
 import { Errors } from "../../lib/errors";
-import { generateCollectionToken, generateAgentToken } from "../../lib/token";
+import { generateCollectionToken } from "../../lib/token";
 import { DEFAULT_ITEMS } from "../collections/default-items";
 import { storageService } from "../storage";
 import { env } from "../../config/env";
@@ -38,7 +38,6 @@ router.post(
     }
 
     const { raw, hash } = generateCollectionToken();
-    const { raw: agentRaw, hash: agentHash } = generateAgentToken();
 
     // Uma URL fixa configurada no servidor (DEFAULT_CALLBACK_URL) sempre tem prioridade
     // sobre o que vier no corpo da requisição — assim o Make não precisa mais mandar
@@ -49,7 +48,6 @@ router.post(
       data: {
         clientId: client.id,
         tokenHash: hash,
-        agentTokenHash: agentHash,
         status: "SENT",
         callbackUrl: effectiveCallbackUrl,
         expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
@@ -57,11 +55,10 @@ router.post(
       },
     });
 
-    // "link" é mantido por compatibilidade com automações existentes no Make (aponta
-    // para a nova sala de atendimento, que já inclui o formulário). clientLink/agentLink
-    // são os campos recomendados daqui pra frente — o Make coloca o clientLink no CRM.
+    // "link" é o único link enviado ao cliente — abre a sala de atendimento (vídeo +
+    // formulário) como convidado, sem senha. O consultor não usa esse link: ele entra
+    // pelo painel (/painel), autenticado com a senha da equipe, e acessa a mesma sala.
     const clientLink = `${env.clientUrl}/atendimento/${collection.id}?token=${raw}`;
-    const agentLink = `${env.clientUrl}/atendimento/${collection.id}?token=${agentRaw}`;
 
     res.status(201).json({
       tipo: "LINK",
@@ -69,7 +66,6 @@ router.post(
       token: raw,
       link: clientLink,
       clientLink,
-      agentLink,
       expiresAt: collection.expiresAt,
     });
   })

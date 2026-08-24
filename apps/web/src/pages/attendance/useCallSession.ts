@@ -2,12 +2,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { Room, RoomEvent, RemoteTrack, RemoteTrackPublication, RemoteParticipant, Track } from "livekit-client";
 import { videoApi, realtimeUrl } from "../../lib/videoApi";
+import { getAgentSession } from "../../lib/agentAuth";
 import type { CallState, Role } from "./types";
 
 interface UseCallSessionParams {
   collectionId: string;
-  token: string;
   role: Role;
+  // Só o CLIENT usa token (vem da URL). O AGENT autentica via sessão do painel
+  // (header Authorization, anexado automaticamente pelo videoApi).
+  token?: string;
 }
 
 export function useCallSession({ collectionId, token, role }: UseCallSessionParams) {
@@ -27,11 +30,12 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   const livekitCredsRef = useRef<{ url: string; jwt: string } | null>(null);
 
   useEffect(() => {
-    if (!collectionId || !token) return;
+    if (!collectionId) return;
+    if (role === "CLIENT" && !token) return;
     let cancelled = false;
 
     videoApi
-      .post(`/${collectionId}/token`, { token })
+      .post(`/${collectionId}/token`, token ? { token } : {})
       .then(({ data }) => {
         if (cancelled) return;
         livekitCredsRef.current = { url: data.livekitUrl, jwt: data.livekitToken };
@@ -43,7 +47,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
 
     const socket = io(realtimeUrl, {
       path: "/realtime",
-      query: { collectionId, token },
+      query:
+        role === "AGENT"
+          ? { collectionId, agentSession: getAgentSession() ?? "" }
+          : { collectionId, token: token ?? "" },
       transports: ["websocket", "polling"],
     });
     socketRef.current = socket;
@@ -66,14 +73,14 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
       roomRef.current?.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionId, token]);
+  }, [collectionId, token, role]);
 
   const connectLiveKit = useCallback(async () => {
     setCallState("connecting");
     setMediaError(null);
     try {
       if (!livekitCredsRef.current) {
-        const { data } = await videoApi.post(`/${collectionId}/token`, { token });
+        const { data } = await videoApi.post(`/${collectionId}/token`, token ? { token } : {});
         livekitCredsRef.current = { url: data.livekitUrl, jwt: data.livekitToken };
       }
       const room = new Room();

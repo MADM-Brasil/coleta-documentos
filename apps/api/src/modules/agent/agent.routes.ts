@@ -6,8 +6,15 @@ import { asyncHandler } from "../../middlewares/error";
 import { Errors } from "../../lib/errors";
 import { env } from "../../config/env";
 import { createAgentSessionToken, verifyAgentSessionToken } from "../../lib/agent-session";
+import { createCollectionRequest, reissueClientLink } from "../collections/collections.service";
 
 const router = Router();
+
+function requireAgentAuth(req: import("express").Request) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+  if (!verifyAgentSessionToken(token)) throw Errors.unauthorized("Sessão expirada. Faça login novamente.");
+}
 
 const loginSchema = z.object({ password: z.string().min(1) });
 
@@ -33,9 +40,7 @@ router.post(
 router.get(
   "/collections",
   asyncHandler(async (req, res) => {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
-    if (!verifyAgentSessionToken(token)) throw Errors.unauthorized("Sessão expirada. Faça login novamente.");
+    requireAgentAuth(req);
 
     const collections = await prisma.collectionRequest.findMany({
       where: { status: { in: ["SENT", "OPENED", "IN_PROGRESS"] } },
@@ -53,6 +58,37 @@ router.get(
         totalCount: c.items.length,
       })),
     });
+  })
+);
+
+const createSessionSchema = z.object({ name: z.string().min(1) });
+
+// Criação manual de uma sessão de atendimento pelo consultor (fora do fluxo automático
+// do Make) — gera a coleta e devolve o clientLink pronto pra compartilhar (ex: WhatsApp).
+router.post(
+  "/collections",
+  asyncHandler(async (req, res) => {
+    requireAgentAuth(req);
+    const { name } = createSessionSchema.parse(req.body);
+
+    const { collection, clientLink } = await createCollectionRequest({ name, expiresInDays: 2 });
+
+    res.status(201).json({ collectionId: collection.id, clientLink });
+  })
+);
+
+// Gera um novo link de cliente para uma sessão já existente (o token bruto não fica
+// guardado no banco — só o hash — então "Compartilhar" numa sessão antiga precisa
+// emitir um token novo, invalidando o anterior).
+router.post(
+  "/collections/:collectionId/relink",
+  asyncHandler(async (req, res) => {
+    requireAgentAuth(req);
+    const collection = await prisma.collectionRequest.findUnique({ where: { id: req.params.collectionId } });
+    if (!collection) throw Errors.notFound("Atendimento não encontrado.");
+
+    const clientLink = await reissueClientLink(collection.id);
+    res.json({ clientLink });
   })
 );
 

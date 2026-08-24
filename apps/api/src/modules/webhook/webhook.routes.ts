@@ -5,8 +5,7 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../middlewares/error";
 import { Errors } from "../../lib/errors";
-import { generateCollectionToken } from "../../lib/token";
-import { DEFAULT_ITEMS } from "../collections/default-items";
+import { createCollectionRequest } from "../collections/collections.service";
 import { storageService } from "../storage";
 import { env } from "../../config/env";
 
@@ -32,38 +31,21 @@ router.post(
   asyncHandler(async (req, res) => {
     const { name, phone, email, externalId, expiresInDays, callbackUrl } = createSchema.parse(req.body);
 
-    let client = externalId ? await prisma.client.findFirst({ where: { externalId } }) : null;
-    if (!client) {
-      client = await prisma.client.create({ data: { name, phone, email, externalId } });
-    }
-
-    const { raw, hash } = generateCollectionToken();
-
-    // Uma URL fixa configurada no servidor (DEFAULT_CALLBACK_URL) sempre tem prioridade
-    // sobre o que vier no corpo da requisição — assim o Make não precisa mais mandar
-    // "callbackUrl" a cada chamada.
-    const effectiveCallbackUrl = env.defaultCallbackUrl ?? callbackUrl;
-
-    const collection = await prisma.collectionRequest.create({
-      data: {
-        clientId: client.id,
-        tokenHash: hash,
-        status: "SENT",
-        callbackUrl: effectiveCallbackUrl,
-        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
-        items: { create: DEFAULT_ITEMS },
-      },
+    const { collection, clientLink } = await createCollectionRequest({
+      name,
+      phone,
+      email,
+      externalId,
+      expiresInDays,
+      callbackUrl,
     });
 
     // "link" é o único link enviado ao cliente — abre a sala de atendimento (vídeo +
     // formulário) como convidado, sem senha. O consultor não usa esse link: ele entra
     // pelo painel (/painel), autenticado com a senha da equipe, e acessa a mesma sala.
-    const clientLink = `${env.clientUrl}/atendimento/${collection.id}?token=${raw}`;
-
     res.status(201).json({
       tipo: "LINK",
       collectionId: collection.id,
-      token: raw,
       link: clientLink,
       clientLink,
       expiresAt: collection.expiresAt,

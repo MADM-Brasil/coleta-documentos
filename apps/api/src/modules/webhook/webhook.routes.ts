@@ -81,8 +81,12 @@ router.get(
       );
     }
 
+    // "cross-origin" (em vez do padrão "same-origin" do Helmet) — essa rota existe
+    // justamente pra ser consumida de outro domínio (Make, e o preview de documentos
+    // do painel do consultor, que roda num domínio separado da API).
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("Content-Type", media.mimeType);
-    res.setHeader("Content-Disposition", `attachment; filename="${media.originalFilename}"`);
+    res.setHeader("Content-Disposition", `inline; filename="${media.originalFilename}"`);
     res.sendFile(filePath);
   })
 );

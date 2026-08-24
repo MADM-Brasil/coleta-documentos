@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { Loader2, PhoneIncoming, ShieldAlert } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { videoApi, realtimeUrl } from "../../lib/videoApi";
+import { videoApi, agentApi, realtimeUrl } from "../../lib/videoApi";
 import { getAgentSession } from "../../lib/agentAuth";
 import { useCallSession } from "./useCallSession";
 import { ParticipantVideo } from "./components/ParticipantVideo";
 import { VideoControls } from "./components/VideoControls";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { DocumentPanel } from "./components/DocumentPanel";
+import { ShareLinkModal } from "../agent/ShareLinkModal";
 import type { AgentCollection } from "./types";
 
 interface AgentAttendanceProps {
@@ -20,6 +21,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   const [collection, setCollection] = useState<AgentCollection | null>(null);
   const [loadError, setLoadError] = useState("");
   const [finalizing, setFinalizing] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
 
   const loadCollection = useCallback(() => {
     videoApi
@@ -63,6 +65,11 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
     } finally {
       setFinalizing(false);
     }
+  }
+
+  async function handleShare() {
+    const { data } = await agentApi.post(`/collections/${collectionId}/relink`);
+    setShareLink(data.clientLink);
   }
 
   return (
@@ -142,9 +149,14 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             onReject={handleReject}
             onFinalize={handleFinalize}
             finalizing={finalizing}
+            onShare={handleShare}
           />
         )}
       </div>
+
+      {shareLink && collection && (
+        <ShareLinkModal clientName={collection.client.name} link={shareLink} onClose={() => setShareLink(null)} />
+      )}
     </div>
   );
 }

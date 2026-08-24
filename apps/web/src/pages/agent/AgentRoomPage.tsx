@@ -8,8 +8,8 @@ export function AgentRoomPage() {
   const { collectionId } = useParams<{ collectionId: string }>();
 
   useEffect(() => {
-    if (!getAgentSession()) navigate("/painel/login");
-  }, [navigate]);
+    if (!getAgentSession()) navigate(`/painel/login?next=/painel/atendimento/${collectionId}`);
+  }, [navigate, collectionId]);
 
   if (!collectionId || !getAgentSession()) return null;
 

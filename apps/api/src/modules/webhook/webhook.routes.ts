@@ -40,13 +40,16 @@ router.post(
       callbackUrl,
     });
 
-    // "link" é o único link enviado ao cliente — abre a sala de atendimento (vídeo +
-    // formulário) como convidado, sem senha. O consultor não usa esse link: ele entra
-    // pelo painel (/painel), autenticado com a senha da equipe, e acessa a mesma sala.
+    // "link" (= agentLink) é o que o Make coloca na nota/CRM pro CONSULTOR — abre a sala
+    // direto (pede login com a senha da equipe se ainda não estiver logado). O consultor
+    // é quem manda o clientLink pro cliente, clicando em "Compartilhar" dentro da sala.
+    const agentLink = `${env.clientUrl}/painel/atendimento/${collection.id}`;
+
     res.status(201).json({
       tipo: "LINK",
       collectionId: collection.id,
-      link: clientLink,
+      link: agentLink,
+      agentLink,
       clientLink,
       expiresAt: collection.expiresAt,
     });

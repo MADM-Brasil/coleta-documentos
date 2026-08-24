@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Lock } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { agentApi } from "../../lib/videoApi";
@@ -8,6 +8,10 @@ import { extractErrorMessage } from "../../lib/api";
 
 export function AgentLogin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Ex: Make manda o consultor direto pra uma sala específica (/painel/atendimento/:id) —
+  // se ele ainda não tiver logado, volta pra ela depois do login em vez da lista geral.
+  const next = searchParams.get("next") || "/painel";
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,7 +23,7 @@ export function AgentLogin() {
     try {
       const { data } = await agentApi.post("/login", { password });
       setAgentSession(data.token);
-      navigate("/painel");
+      navigate(next);
     } catch (err) {
       setError(extractErrorMessage(err, "Não foi possível entrar. Tente novamente."));
     } finally {

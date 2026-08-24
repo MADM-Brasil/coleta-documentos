@@ -1,14 +1,24 @@
-import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ScreenShare, ScreenShareOff } from "lucide-react";
 
 interface VideoControlsProps {
   micEnabled: boolean;
   camEnabled: boolean;
+  screenShareEnabled?: boolean;
   onToggleMic: () => void;
   onToggleCam: () => void;
+  onToggleScreenShare?: () => void;
   onEndCall: () => void;
 }
 
-export function VideoControls({ micEnabled, camEnabled, onToggleMic, onToggleCam, onEndCall }: VideoControlsProps) {
+export function VideoControls({
+  micEnabled,
+  camEnabled,
+  screenShareEnabled,
+  onToggleMic,
+  onToggleCam,
+  onToggleScreenShare,
+  onEndCall,
+}: VideoControlsProps) {
   return (
     <div className="flex items-center justify-center gap-3">
       <ControlButton active={micEnabled} onClick={onToggleMic} label={micEnabled ? "Silenciar" : "Ativar microfone"}>
@@ -17,6 +27,15 @@ export function VideoControls({ micEnabled, camEnabled, onToggleMic, onToggleCam
       <ControlButton active={camEnabled} onClick={onToggleCam} label={camEnabled ? "Desligar câmera" : "Ligar câmera"}>
         {camEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
       </ControlButton>
+      {onToggleScreenShare && (
+        <ControlButton
+          active={!screenShareEnabled}
+          onClick={onToggleScreenShare}
+          label={screenShareEnabled ? "Parar compartilhamento de tela" : "Compartilhar tela"}
+        >
+          {screenShareEnabled ? <ScreenShareOff className="h-5 w-5" /> : <ScreenShare className="h-5 w-5" />}
+        </ControlButton>
+      )}
       <button
         type="button"
         onClick={onEndCall}

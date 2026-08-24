@@ -18,6 +18,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   const [peerConnected, setPeerConnected] = useState(false);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
+  const [screenShareEnabled, setScreenShareEnabled] = useState(false);
+  // true quando o OUTRO participante está compartilhando a tela — o vídeo principal
+  // passa a mostrar a tela dele em vez da câmera enquanto isso durar.
+  const [remoteScreenSharing, setRemoteScreenSharing] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>("");
@@ -32,6 +36,23 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const livekitCredsRef = useRef<{ url: string; jwt: string } | null>(null);
+  // A câmera e a tela compartilhada do outro participante são dois tracks de vídeo
+  // separados — guardamos os dois e decidimos qual anexar ao <video> principal
+  // (tela compartilhada tem prioridade sobre a câmera).
+  const remoteCameraTrackRef = useRef<RemoteTrack | null>(null);
+  const remoteScreenTrackRef = useRef<RemoteTrack | null>(null);
+
+  function renderRemoteVideo() {
+    if (!remoteVideoRef.current) return;
+    const track = remoteScreenTrackRef.current ?? remoteCameraTrackRef.current;
+    if (track) {
+      track.attach(remoteVideoRef.current);
+      setRemoteVideoActive(true);
+    } else {
+      setRemoteVideoActive(false);
+    }
+    setRemoteScreenSharing(Boolean(remoteScreenTrackRef.current));
+  }
 
   useEffect(() => {
     if (!collectionId) return;
@@ -95,18 +116,25 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
       const room = new Room();
       roomRef.current = room;
 
-      room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication, _p: RemoteParticipant) => {
-        if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
-          track.attach(remoteVideoRef.current);
-          setRemoteVideoActive(true);
+      room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, pub: RemoteTrackPublication, _p: RemoteParticipant) => {
+        if (track.kind === Track.Kind.Video) {
+          if (pub.source === Track.Source.ScreenShare) remoteScreenTrackRef.current = track;
+          else remoteCameraTrackRef.current = track;
+          renderRemoteVideo();
         }
         if (track.kind === Track.Kind.Audio && remoteAudioRef.current) track.attach(remoteAudioRef.current);
       });
-      room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
-        if (track.kind === Track.Kind.Video) setRemoteVideoActive(false);
+      room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, pub: RemoteTrackPublication) => {
+        if (track.kind !== Track.Kind.Video) return;
+        if (pub.source === Track.Source.ScreenShare) remoteScreenTrackRef.current = null;
+        else remoteCameraTrackRef.current = null;
+        renderRemoteVideo();
       });
       room.on(RoomEvent.Disconnected, () => {
+        remoteCameraTrackRef.current = null;
+        remoteScreenTrackRef.current = null;
         setRemoteVideoActive(false);
+        setRemoteScreenSharing(false);
         setCallState("ended");
       });
 
@@ -133,7 +161,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   function disconnectLiveKit() {
     roomRef.current?.disconnect();
     roomRef.current = null;
+    remoteCameraTrackRef.current = null;
+    remoteScreenTrackRef.current = null;
     setRemoteVideoActive(false);
+    setRemoteScreenSharing(false);
     setCallState("ended");
   }
 
@@ -163,11 +194,23 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     setCamEnabled(next);
   }
 
+  async function toggleScreenShare() {
+    const next = !screenShareEnabled;
+    try {
+      await roomRef.current?.localParticipant.setScreenShareEnabled(next, { audio: true });
+      setScreenShareEnabled(next);
+    } catch {
+      /* usuário cancelou o seletor de tela do navegador, ou o navegador não suporta — ignora */
+    }
+  }
+
   return {
     callState,
     peerConnected,
     micEnabled,
     camEnabled,
+    screenShareEnabled,
+    remoteScreenSharing,
     mediaError,
     connectionError,
     clientName,
@@ -180,5 +223,6 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     endCall,
     toggleMic,
     toggleCam,
+    toggleScreenShare,
   };
 }

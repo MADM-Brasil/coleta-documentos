@@ -111,7 +111,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             <ConnectionStatus
               label={
                 session.callState === "active"
-                  ? session.remoteVideoActive
+                  ? session.remoteScreenSharing
+                    ? "Cliente compartilhando a tela"
+                    : session.remoteVideoActive
                     ? "Chamada em andamento"
                     : "Aguardando vídeo do cliente..."
                   : session.peerConnected
@@ -179,8 +181,10 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             <VideoControls
               micEnabled={session.micEnabled}
               camEnabled={session.camEnabled}
+              screenShareEnabled={session.screenShareEnabled}
               onToggleMic={session.toggleMic}
               onToggleCam={session.toggleCam}
+              onToggleScreenShare={session.toggleScreenShare}
               onEndCall={session.endCall}
             />
           </div>

@@ -76,7 +76,9 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
 
   const videoStatusLabel =
     session.callState === "active"
-      ? "Em chamada"
+      ? session.remoteScreenSharing
+        ? "Consultor compartilhando a tela"
+        : "Em chamada"
       : session.callState === "incoming" || session.callState === "connecting"
       ? "Conectando..."
       : session.peerConnected
@@ -122,8 +124,10 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
       <VideoControls
         micEnabled={session.micEnabled}
         camEnabled={session.camEnabled}
+        screenShareEnabled={session.screenShareEnabled}
         onToggleMic={session.toggleMic}
         onToggleCam={session.toggleCam}
+        onToggleScreenShare={session.toggleScreenShare}
         onEndCall={session.endCall}
       />
     </div>

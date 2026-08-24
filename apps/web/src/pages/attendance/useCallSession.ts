@@ -80,6 +80,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   }, [collectionId, token, role]);
 
   const connectLiveKit = useCallback(async () => {
+    // Evita reconectar (e perder os tracks já anexados) se um segundo "call_accepted"
+    // chegar enquanto já estamos conectados/conectando — pode acontecer se o socket
+    // reconectar sozinho (rede instável) e o servidor reemitir o evento.
+    if (roomRef.current) return;
     setCallState("connecting");
     setMediaError(null);
     try {
@@ -115,6 +119,8 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
       setCallState("active");
     } catch (err) {
       console.error(err);
+      roomRef.current?.disconnect();
+      roomRef.current = null;
       setMediaError(
         "Não conseguimos acessar sua câmera ou microfone. Verifique as permissões do navegador e tente novamente."
       );

@@ -105,25 +105,46 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
       const local = session.localVideoRef.current;
       if (!canvas || !pipVideo || !remote) return;
 
-      canvas.width = 960;
-      canvas.height = 540;
+      // Vertical (celular do cliente é a fonte principal, quase sempre em pé).
+      canvas.width = 540;
+      canvas.height = 960;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+
+      // Desenha "cobrindo" o quadro (igual object-fit: cover) — mantém a proporção
+      // real da câmera em vez de esticar/distorcer o vídeo pra caber no canvas.
+      function drawCover(video: HTMLVideoElement, x: number, y: number, w: number, h: number) {
+        if (!ctx || !video.videoWidth || !video.videoHeight) return;
+        const srcRatio = video.videoWidth / video.videoHeight;
+        const dstRatio = w / h;
+        let sx = 0,
+          sy = 0,
+          sw = video.videoWidth,
+          sh = video.videoHeight;
+        if (srcRatio > dstRatio) {
+          sw = video.videoHeight * dstRatio;
+          sx = (video.videoWidth - sw) / 2;
+        } else {
+          sh = video.videoWidth / dstRatio;
+          sy = (video.videoHeight - sh) / 2;
+        }
+        ctx.drawImage(video, sx, sy, sw, sh, x, y, w, h);
+      }
 
       function draw() {
         if (!ctx || !canvas) return;
         ctx.fillStyle = "#0f172a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (remote && remote.readyState >= 2) ctx.drawImage(remote, 0, 0, canvas.width, canvas.height);
+        if (remote && remote.readyState >= 2) drawCover(remote, 0, 0, canvas.width, canvas.height);
         if (local && local.readyState >= 2) {
-          const pipW = canvas.width * 0.26;
-          const pipH = canvas.height * 0.26;
+          const pipW = canvas.width * 0.32;
+          const pipH = pipW * (local.videoHeight / local.videoWidth || 0.75);
           const x = canvas.width - pipW - 16;
           const y = canvas.height - pipH - 16;
           ctx.save();
           ctx.strokeStyle = "rgba(255,255,255,0.6)";
           ctx.lineWidth = 3;
-          ctx.drawImage(local, x, y, pipW, pipH);
+          drawCover(local, x, y, pipW, pipH);
           ctx.strokeRect(x, y, pipW, pipH);
           ctx.restore();
         }

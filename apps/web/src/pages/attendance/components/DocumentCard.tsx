@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Check, Clock, Eye, RotateCcw, ShieldAlert, Loader2 } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import type { AgentItem } from "../types";
+
+const apiBaseUrl = import.meta.env.VITE_API_URL ?? "";
 
 const STATUS_LABEL: Record<AgentItem["status"], string> = {
   PENDING: "Pendente",
@@ -27,9 +30,11 @@ export function DocumentCard({ item, onApprove, onReject }: DocumentCardProps) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const media = item.media[item.media.length - 1];
   const canReview = item.status === "UPLOADED";
+  const mediaUrl = media ? media.url ?? `${apiBaseUrl}/webhook/media/${media.id}` : null;
 
   async function handleApprove() {
     setBusy(true);
@@ -69,15 +74,23 @@ export function DocumentCard({ item, onApprove, onReject }: DocumentCardProps) {
         </span>
       </div>
 
-      {media && (
-        <a
-          href={media.url ?? "#"}
-          target="_blank"
-          rel="noreferrer"
+      {media && mediaUrl && (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
           className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700"
         >
           <Eye className="h-3.5 w-3.5" /> Visualizar
-        </a>
+        </button>
+      )}
+
+      {previewOpen && media && mediaUrl && (
+        <DocumentPreviewModal
+          url={mediaUrl}
+          mimeType={media.mimeType}
+          filename={media.originalFilename}
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
 
       {canReview && !rejecting && (

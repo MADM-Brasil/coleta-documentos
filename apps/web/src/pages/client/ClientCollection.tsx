@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { publicApi, extractErrorMessage } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
 import { ProgressBar } from "../../components/ui/ProgressBar";
@@ -15,6 +15,8 @@ export function ClientCollection() {
   const [stage, setStage] = useState<Stage>("loading");
   const [data, setData] = useState<ClientCollectionData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showMissing, setShowMissing] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -45,6 +47,27 @@ export function ClientCollection() {
     );
     if (collectionStatus === "COMPLETED") {
       setStage("completed");
+    }
+  }
+
+  async function handleFinalize() {
+    if (!data) return;
+    const pending = data.items.some((i) => i.required && i.status !== "UPLOADED");
+    if (pending) {
+      setShowMissing(true);
+      return;
+    }
+    setFinalizing(true);
+    setErrorMessage("");
+    try {
+      const { data: resp } = await publicApi.post(`/${token}/finish`);
+      if (resp.collectionStatus === "COMPLETED") {
+        setStage("completed");
+      }
+    } catch (err) {
+      setErrorMessage(extractErrorMessage(err, "Não conseguimos finalizar seu envio. Tente novamente."));
+    } finally {
+      setFinalizing(false);
     }
   }
 
@@ -138,23 +161,37 @@ export function ClientCollection() {
         </div>
 
         <div className="space-y-3">
-          {data.items.map((item, idx) => (
-            <div key={item.id}>
-              {item.type === "CTPS" && (
-                <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
-              )}
-              {item.multiple ? (
-                <MultiItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} />
-              ) : (
-                <ItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} />
-              )}
-            </div>
-          ))}
+          {data.items.map((item, idx) => {
+            const missing = showMissing && item.required && item.status !== "UPLOADED";
+            return (
+              <div key={item.id}>
+                {item.type === "CTPS" && (
+                  <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
+                )}
+                {item.multiple ? (
+                  <MultiItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
+                ) : (
+                  <ItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {showMissing && !errorMessage && (
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            Faltam itens obrigatórios (destacados em vermelho acima).
+          </div>
+        )}
 
         {errorMessage && (
           <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{errorMessage}</div>
         )}
+
+        <Button size="lg" className="w-full" onClick={handleFinalize} disabled={finalizing}>
+          {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Finalizar Envio
+        </Button>
       </div>
     </Shell>
   );

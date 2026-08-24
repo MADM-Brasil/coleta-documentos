@@ -149,18 +149,11 @@ router.post(
       mediaId: media.id,
     });
 
-    const items = await prisma.collectionItem.findMany({ where: { collectionRequestId: req.collectionRequestId } });
-    const allSent = items.every((i) => i.status === "UPLOADED" || !i.required);
-
+    // A coleta só é marcada como concluída quando o cliente confirma no botão
+    // "Finalizar Envio" (rota /:token/finish) — vários itens aceitam mais de um
+    // arquivo, então o sistema não tem como saber sozinho quando o cliente terminou.
     let collectionStatus = collectionBefore!.status;
-    if (allSent) {
-      collectionStatus = "COMPLETED";
-      await prisma.collectionRequest.update({
-        where: { id: req.collectionRequestId },
-        data: { status: "COMPLETED", completedAt: new Date() },
-      });
-      await recordEvent(req.collectionRequestId!, "collection:completed", "SYSTEM");
-    } else if (collectionBefore!.status !== "IN_PROGRESS") {
+    if (collectionBefore!.status !== "IN_PROGRESS") {
       collectionStatus = "IN_PROGRESS";
       await prisma.collectionRequest.update({ where: { id: req.collectionRequestId }, data: { status: "IN_PROGRESS" } });
     }
@@ -181,6 +174,39 @@ router.post(
     void attachFileToKommoLead(collectionBefore!.client.externalId, file.buffer, mimeType, file.originalname);
 
     res.status(201).json({ media, itemStatus: "UPLOADED", collectionStatus });
+  })
+);
+
+// Confirmação explícita do cliente de que terminou de enviar tudo — necessário porque
+// vários itens aceitam mais de um arquivo (laudos, cartas, cópia de processo), então
+// o sistema não consegue detectar sozinho quando a coleta está completa.
+router.post(
+  "/:token/finish",
+  requireCollectionToken,
+  asyncHandler(async (req, res) => {
+    const collection = await prisma.collectionRequest.findUnique({
+      where: { id: req.collectionRequestId },
+      include: { items: true },
+    });
+    if (!collection) throw Errors.notFound();
+    if (collection.status === "COMPLETED") {
+      return res.json({ collectionStatus: "COMPLETED" });
+    }
+
+    const pending = collection.items.filter((i) => i.required && i.status !== "UPLOADED");
+    if (pending.length > 0) {
+      throw Errors.validation(
+        `Ainda faltam itens obrigatórios: ${pending.map((i) => i.title).join(", ")}.`
+      );
+    }
+
+    await prisma.collectionRequest.update({
+      where: { id: collection.id },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+    await recordEvent(collection.id, "collection:completed", "CLIENT");
+
+    res.json({ collectionStatus: "COMPLETED" });
   })
 );
 

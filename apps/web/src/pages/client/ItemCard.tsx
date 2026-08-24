@@ -40,9 +40,10 @@ interface ItemCardProps {
   item: ClientItem;
   index: number;
   onUploaded: (itemId: string, collectionStatus: string) => void;
+  missing?: boolean;
 }
 
-export function ItemCard({ token, item, index, onUploaded }: ItemCardProps) {
+export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -151,7 +152,7 @@ export function ItemCard({ token, item, index, onUploaded }: ItemCardProps) {
   return (
     <div
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
-        done ? "border-emerald-200" : "border-slate-200"
+        done ? "border-emerald-200" : missing ? "border-red-300" : "border-slate-200"
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
@@ -172,7 +173,11 @@ export function ItemCard({ token, item, index, onUploaded }: ItemCardProps) {
           <p className="truncate text-sm text-slate-500">{done ? "Enviado com sucesso" : item.description}</p>
         </div>
         {!done && (
-          <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+          <span
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+              missing ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+            }`}
+          >
             Enviar
           </span>
         )}

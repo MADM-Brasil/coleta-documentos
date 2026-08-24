@@ -17,7 +17,8 @@ const createSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email().optional(),
   externalId: z.string().optional(),
-  expiresInDays: z.number().min(1).max(90).default(7),
+  // Padrão de 2 dias (48h) — prazo para o cliente concluir o envio antes do link expirar.
+  expiresInDays: z.number().min(1).max(90).default(2),
   // URL do gatilho "Custom Webhook" do Make — o sistema chama essa URL em tempo real
   // a cada documento enviado e quando a coleta é concluída.
   callbackUrl: z.string().url().optional(),

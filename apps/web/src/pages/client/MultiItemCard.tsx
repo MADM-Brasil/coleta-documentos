@@ -9,9 +9,10 @@ interface MultiItemCardProps {
   item: ClientItem;
   index: number;
   onUploaded: (itemId: string, collectionStatus: string, media: ClientMedia) => void;
+  missing?: boolean;
 }
 
-export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardProps) {
+export function MultiItemCard({ token, item, index, onUploaded, missing }: MultiItemCardProps) {
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -47,7 +48,7 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
   return (
     <div
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
-        done ? "border-emerald-200" : "border-slate-200"
+        done ? "border-emerald-200" : missing ? "border-red-300" : "border-slate-200"
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
@@ -71,7 +72,11 @@ export function MultiItemCard({ token, item, index, onUploaded }: MultiItemCardP
               : item.description}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+        <span
+          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+            missing ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+          }`}
+        >
           {item.media.length > 0 ? "Adicionar" : "Enviar"}
         </span>
       </button>

@@ -65,3 +65,13 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    # index.html nunca deve ficar em cache (senão o navegador/CDN mostra a versão antiga
+    # do site por até 5 minutos depois de um deploy novo) — só os arquivos com hash no
+    # nome (/assets/*, já gerados pelo Vite) podem ficar em cache por muito tempo.
+    headers:
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

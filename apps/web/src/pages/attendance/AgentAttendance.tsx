@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
-import { ArrowLeft, Loader2, PhoneIncoming, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Loader2, PhoneIncoming, PictureInPicture2, ShieldAlert } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { videoApi, agentApi, realtimeUrl } from "../../lib/videoApi";
 import { getAgentSession } from "../../lib/agentAuth";
@@ -74,6 +74,20 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
     setShareLink(data.clientLink);
   }
 
+  async function handlePictureInPicture() {
+    try {
+      const video = session.remoteVideoRef.current;
+      if (!video) return;
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await video.requestPictureInPicture();
+      }
+    } catch {
+      /* navegador pode bloquear PiP (sem interação do usuário, sem suporte etc.) — ignora silenciosamente */
+    }
+  }
+
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-white lg:flex-row">
       <div className="relative flex h-[38vh] max-h-[340px] shrink-0 flex-col overflow-hidden bg-slate-950 lg:h-screen lg:max-h-none lg:w-[56%]">
@@ -107,6 +121,18 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
               tone={session.callState === "active" ? "positive" : session.peerConnected ? "warning" : "neutral"}
             />
           </div>
+
+          {session.callState === "active" && session.remoteVideoActive && (
+            <button
+              type="button"
+              onClick={handlePictureInPicture}
+              aria-label="Abrir vídeo em janela flutuante"
+              title="Abrir vídeo em janela flutuante"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+            >
+              <PictureInPicture2 className="h-4 w-4" />
+            </button>
+          )}
 
           <div className="absolute bottom-4 right-4 h-32 w-24 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-40 sm:w-32">
             <ParticipantVideo ref={session.localVideoRef} label="Você" muted showPlaceholder={session.callState !== "active"} />

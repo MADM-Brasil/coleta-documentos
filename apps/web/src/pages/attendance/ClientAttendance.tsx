@@ -84,35 +84,37 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
       : "Aguardando consultor...";
 
   const videoPanel = (
-    <div className="relative h-full w-full bg-slate-900">
-      <ParticipantVideo ref={session.remoteVideoRef} label="Consultor" showPlaceholder={session.callState !== "active"} />
-      <audio ref={session.remoteAudioRef} autoPlay />
+    <div className="flex h-full w-full flex-col bg-slate-900">
+      <div className="relative flex-1">
+        <ParticipantVideo ref={session.remoteVideoRef} label="Consultor" showPlaceholder={session.callState !== "active"} />
+        <audio ref={session.remoteAudioRef} autoPlay />
 
-      <div className="absolute left-3 top-3">
-        <ConnectionStatus
-          label={videoStatusLabel}
-          tone={session.callState === "active" ? "positive" : session.peerConnected ? "warning" : "neutral"}
-        />
-      </div>
-
-      <div className="absolute bottom-3 right-3 h-20 w-16 overflow-hidden rounded-lg border-2 border-white/20 shadow-lg sm:h-28 sm:w-20">
-        <ParticipantVideo ref={session.localVideoRef} label="Você" muted showPlaceholder={session.callState !== "active"} />
-      </div>
-
-      {session.callState === "connecting" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <Loader2 className="h-6 w-6 animate-spin text-white" />
+        <div className="absolute left-3 top-3">
+          <ConnectionStatus
+            label={videoStatusLabel}
+            tone={session.callState === "active" ? "positive" : session.peerConnected ? "warning" : "neutral"}
+          />
         </div>
-      )}
 
-      {session.mediaError && (
-        <div className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-lg bg-red-600/90 px-2 py-1.5 text-xs text-white">
-          <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> {session.mediaError}
+        <div className="absolute bottom-3 right-3 h-20 w-16 overflow-hidden rounded-lg border-2 border-white/20 shadow-lg sm:h-28 sm:w-20">
+          <ParticipantVideo ref={session.localVideoRef} label="Você" muted showPlaceholder={session.callState !== "active"} />
         </div>
-      )}
+
+        {session.callState === "connecting" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+          </div>
+        )}
+
+        {session.mediaError && (
+          <div className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-lg bg-red-600/90 px-2 py-1.5 text-xs text-white">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> {session.mediaError}
+          </div>
+        )}
+      </div>
 
       {session.callState === "active" && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+        <div className="shrink-0 border-t border-white/10 bg-slate-950/95 px-3 py-2.5">
           <VideoControls
             micEnabled={session.micEnabled}
             camEnabled={session.camEnabled}

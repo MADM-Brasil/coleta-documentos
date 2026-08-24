@@ -16,7 +16,7 @@ export const ParticipantVideo = forwardRef<HTMLVideoElement, ParticipantVideoPro
         autoPlay
         playsInline
         muted={muted}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-contain"
       />
       {showPlaceholder && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">

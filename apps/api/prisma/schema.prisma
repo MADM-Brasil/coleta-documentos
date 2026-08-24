@@ -40,6 +40,10 @@ model CollectionRequest {
   // criadas antes dessa feature não têm — o link antigo /coleta/:token continua
   // funcionando normalmente sem ele.
   agentTokenHash String? @unique
+  // Nome do consultor responsável, informado na criação manual pela sala (painel) —
+  // apenas exibição, não é usado pra autenticação (o login continua sendo a senha
+  // compartilhada da equipe).
+  agentName   String?
   status      String    @default("CREATED")
   // URL de webhook (ex: gatilho "Custom Webhook" do Make) para onde o sistema
   // notifica em tempo real cada documento enviado e a conclusão da coleta.

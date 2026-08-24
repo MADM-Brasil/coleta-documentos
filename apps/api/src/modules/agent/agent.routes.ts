@@ -53,6 +53,7 @@ router.get(
         id: c.id,
         status: c.status,
         clientName: c.client.name,
+        agentName: c.agentName,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         approvedCount: c.items.filter((i) => i.status === "APPROVED").length,
@@ -62,7 +63,7 @@ router.get(
   })
 );
 
-const createSessionSchema = z.object({ name: z.string().min(1) });
+const createSessionSchema = z.object({ name: z.string().min(1), agentName: z.string().min(1).optional() });
 
 // Criação manual de uma sessão de atendimento pelo consultor (fora do fluxo automático
 // do Make) — gera a coleta e devolve o clientLink pronto pra compartilhar (ex: WhatsApp).
@@ -70,9 +71,9 @@ router.post(
   "/collections",
   asyncHandler(async (req, res) => {
     requireAgentAuth(req);
-    const { name } = createSessionSchema.parse(req.body);
+    const { name, agentName } = createSessionSchema.parse(req.body);
 
-    const { collection, clientLink } = await createCollectionRequest({ name, expiresInDays: 2 });
+    const { collection, clientLink } = await createCollectionRequest({ name, agentName, expiresInDays: 2 });
 
     res.status(201).json({ collectionId: collection.id, clientLink });
   })

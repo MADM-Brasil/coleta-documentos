@@ -10,13 +10,15 @@ interface CreateCollectionParams {
   externalId?: string;
   expiresInDays: number;
   callbackUrl?: string;
+  // Só exibição (tabela do painel) — não tem relação com autenticação.
+  agentName?: string;
 }
 
 // Núcleo compartilhado entre o webhook do Make (POST /webhook/collections) e a criação
 // manual pelo consultor (POST /api/agent/collections) — o cliente e o item padrão são
 // sempre os mesmos, só muda quem chamou.
 export async function createCollectionRequest(params: CreateCollectionParams) {
-  const { name, phone, email, externalId, expiresInDays, callbackUrl } = params;
+  const { name, phone, email, externalId, expiresInDays, callbackUrl, agentName } = params;
 
   let client = externalId ? await prisma.client.findFirst({ where: { externalId } }) : null;
   if (!client) {
@@ -30,6 +32,7 @@ export async function createCollectionRequest(params: CreateCollectionParams) {
     data: {
       clientId: client.id,
       tokenHash: hash,
+      agentName,
       status: "SENT",
       callbackUrl: effectiveCallbackUrl,
       expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),

@@ -73,8 +73,8 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-white">
-      <div className="relative flex h-[42vh] max-h-[420px] shrink-0 flex-col bg-slate-950">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-white lg:flex-row">
+      <div className="relative flex h-[38vh] max-h-[340px] shrink-0 flex-col bg-slate-950 lg:h-screen lg:max-h-none lg:w-[56%]">
         <div className="relative flex-1">
           <ParticipantVideo
             ref={session.remoteVideoRef}
@@ -140,7 +140,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col lg:w-[44%]">
         {loadError && <div className="p-4 text-sm text-red-600">{loadError}</div>}
         {collection && (
           <DocumentPanel

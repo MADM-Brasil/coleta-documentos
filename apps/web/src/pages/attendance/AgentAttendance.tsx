@@ -104,9 +104,13 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
 
           {session.callState === "incoming" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-6 text-center shadow-card">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-                  <PhoneIncoming className="h-7 w-7" />
+              <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-6 text-center shadow-card animate-fade-in">
+                <div className="relative flex h-14 w-14 items-center justify-center">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-brand-400 opacity-75" />
+                  <span className="absolute inset-0 animate-pulse-dot rounded-full bg-brand-100" />
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                    <PhoneIncoming className="h-7 w-7" />
+                  </div>
                 </div>
                 <p className="font-semibold text-slate-900">Chamada do cliente</p>
                 <Button size="lg" onClick={session.acceptCall}>

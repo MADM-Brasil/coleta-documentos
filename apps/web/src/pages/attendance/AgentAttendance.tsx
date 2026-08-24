@@ -79,7 +79,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
           <ParticipantVideo
             ref={session.remoteVideoRef}
             label={session.clientName || "Cliente"}
-            showPlaceholder={session.callState !== "active"}
+            showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
           />
           <audio ref={session.remoteAudioRef} autoPlay />
 
@@ -87,7 +87,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             <ConnectionStatus
               label={
                 session.callState === "active"
-                  ? "Chamada em andamento"
+                  ? session.remoteVideoActive
+                    ? "Chamada em andamento"
+                    : "Aguardando vídeo do cliente..."
                   : session.peerConnected
                   ? "Cliente conectado"
                   : "Aguardando cliente..."

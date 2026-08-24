@@ -85,7 +85,11 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
 
   const videoArea = (
     <div className="relative h-full w-full bg-slate-900">
-      <ParticipantVideo ref={session.remoteVideoRef} label="Consultor" showPlaceholder={session.callState !== "active"} />
+      <ParticipantVideo
+        ref={session.remoteVideoRef}
+        label="Consultor"
+        showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
+      />
       <audio ref={session.remoteAudioRef} autoPlay />
 
       <div className="absolute left-3 top-3">

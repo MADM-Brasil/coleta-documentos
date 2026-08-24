@@ -21,6 +21,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>("");
+  // true só depois que o vídeo do OUTRO participante é de fato recebido — evita mostrar
+  // uma tela preta "muda" quando a chamada já está "active" mas o outro lado ainda não
+  // publicou a câmera (permissão lenta, rede ruim etc.).
+  const [remoteVideoActive, setRemoteVideoActive] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const roomRef = useRef<Room | null>(null);
@@ -87,10 +91,19 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
       roomRef.current = room;
 
       room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication, _p: RemoteParticipant) => {
-        if (track.kind === Track.Kind.Video && remoteVideoRef.current) track.attach(remoteVideoRef.current);
+        if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
+          track.attach(remoteVideoRef.current);
+          setRemoteVideoActive(true);
+        }
         if (track.kind === Track.Kind.Audio && remoteAudioRef.current) track.attach(remoteAudioRef.current);
       });
-      room.on(RoomEvent.Disconnected, () => setCallState("ended"));
+      room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+        if (track.kind === Track.Kind.Video) setRemoteVideoActive(false);
+      });
+      room.on(RoomEvent.Disconnected, () => {
+        setRemoteVideoActive(false);
+        setCallState("ended");
+      });
 
       await room.connect(livekitCredsRef.current.url, livekitCredsRef.current.jwt);
       await room.localParticipant.setCameraEnabled(true);
@@ -113,6 +126,7 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   function disconnectLiveKit() {
     roomRef.current?.disconnect();
     roomRef.current = null;
+    setRemoteVideoActive(false);
     setCallState("ended");
   }
 
@@ -145,6 +159,7 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     mediaError,
     connectionError,
     clientName,
+    remoteVideoActive,
     localVideoRef,
     remoteVideoRef,
     remoteAudioRef,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
-import { Loader2, PhoneIncoming, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Loader2, PhoneIncoming, ShieldAlert } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { videoApi, agentApi, realtimeUrl } from "../../lib/videoApi";
 import { getAgentSession } from "../../lib/agentAuth";
@@ -17,6 +18,7 @@ interface AgentAttendanceProps {
 }
 
 export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
+  const navigate = useNavigate();
   const session = useCallSession({ collectionId, role: "AGENT" });
   const [collection, setCollection] = useState<AgentCollection | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -83,7 +85,15 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
           />
           <audio ref={session.remoteAudioRef} autoPlay />
 
-          <div className="absolute left-4 top-4 flex gap-2">
+          <div className="absolute left-4 top-4 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/painel")}
+              aria-label="Voltar para o painel"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm hover:bg-black/70"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
             <ConnectionStatus
               label={
                 session.callState === "active"

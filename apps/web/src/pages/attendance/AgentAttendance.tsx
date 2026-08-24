@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { ArrowLeft, Loader2, PhoneIncoming, PictureInPicture2, ShieldAlert } from "lucide-react";
@@ -24,6 +24,12 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   const [loadError, setLoadError] = useState("");
   const [finalizing, setFinalizing] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
+  // PiP nativo do navegador só mostra UM <video> — pra caber cliente + consultor na
+  // janela flutuante, compõe os dois num canvas (desenhado a cada frame) e usa esse
+  // canvas como fonte de um <video> escondido, que é esse que vai pro PiP de verdade.
+  const pipCanvasRef = useRef<HTMLCanvasElement>(null);
+  const pipVideoRef = useRef<HTMLVideoElement>(null);
+  const pipRafRef = useRef<number | null>(null);
 
   const loadCollection = useCallback(() => {
     videoApi
@@ -74,19 +80,60 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
     setShareLink(data.clientLink);
   }
 
+  function stopPipCompositing() {
+    if (pipRafRef.current) cancelAnimationFrame(pipRafRef.current);
+    pipRafRef.current = null;
+  }
+
   async function handlePictureInPicture() {
     try {
-      const video = session.remoteVideoRef.current;
-      if (!video) return;
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
-      } else {
-        await video.requestPictureInPicture();
+        return;
       }
+      const canvas = pipCanvasRef.current;
+      const pipVideo = pipVideoRef.current;
+      const remote = session.remoteVideoRef.current;
+      const local = session.localVideoRef.current;
+      if (!canvas || !pipVideo || !remote) return;
+
+      canvas.width = 960;
+      canvas.height = 540;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      function draw() {
+        if (!ctx || !canvas) return;
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (remote && remote.readyState >= 2) ctx.drawImage(remote, 0, 0, canvas.width, canvas.height);
+        if (local && local.readyState >= 2) {
+          const pipW = canvas.width * 0.26;
+          const pipH = canvas.height * 0.26;
+          const x = canvas.width - pipW - 16;
+          const y = canvas.height - pipH - 16;
+          ctx.save();
+          ctx.strokeStyle = "rgba(255,255,255,0.6)";
+          ctx.lineWidth = 3;
+          ctx.drawImage(local, x, y, pipW, pipH);
+          ctx.strokeRect(x, y, pipW, pipH);
+          ctx.restore();
+        }
+        pipRafRef.current = requestAnimationFrame(draw);
+      }
+
+      const stream = canvas.captureStream(25);
+      pipVideo.srcObject = stream;
+      await pipVideo.play();
+      draw();
+      await pipVideo.requestPictureInPicture();
+      pipVideo.addEventListener("leavepictureinpicture", stopPipCompositing, { once: true });
     } catch {
       /* navegador pode bloquear PiP (sem interação do usuário, sem suporte etc.) — ignora silenciosamente */
     }
   }
+
+  useEffect(() => stopPipCompositing, []);
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-white lg:flex-row">
@@ -208,6 +255,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
       {shareLink && collection && (
         <ShareLinkModal clientName={collection.client.name} link={shareLink} onClose={() => setShareLink(null)} />
       )}
+
+      <canvas ref={pipCanvasRef} className="hidden" />
+      <video ref={pipVideoRef} muted playsInline className="absolute h-px w-px opacity-0" />
     </div>
   );
 }

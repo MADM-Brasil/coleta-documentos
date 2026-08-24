@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Camera,
   Check,
+  Clock,
   FileImage,
   FileText,
   IdCard,
@@ -61,7 +62,9 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const Icon = ICONS[item.type];
-  const done = item.status === "UPLOADED" || item.status === "APPROVED";
+  const approved = item.status === "APPROVED";
+  const pendingReview = item.status === "UPLOADED";
+  const done = pendingReview || approved;
   const video = isVideoType(item.type);
   const audio = isAudioType(item.type);
   const pdfOnly = isPdfOnlyType(item.type);
@@ -153,7 +156,13 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
   return (
     <div
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
-        done ? "border-emerald-200" : missing ? "border-red-300" : "border-slate-200"
+        approved
+          ? "border-emerald-200"
+          : pendingReview
+          ? "border-amber-200"
+          : missing
+          ? "border-red-300"
+          : "border-slate-200"
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
@@ -164,14 +173,26 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
       >
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-            done ? "bg-emerald-100 text-emerald-600" : "bg-brand-50 text-brand-600"
+            approved
+              ? "bg-emerald-100 text-emerald-600"
+              : pendingReview
+              ? "bg-amber-100 text-amber-600"
+              : "bg-brand-50 text-brand-600"
           }`}
         >
-          {done ? <Check className="h-6 w-6" strokeWidth={2.5} /> : <Icon className="h-6 w-6" />}
+          {approved ? (
+            <Check className="h-6 w-6" strokeWidth={2.5} />
+          ) : pendingReview ? (
+            <Clock className="h-6 w-6" />
+          ) : (
+            <Icon className="h-6 w-6" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900">{item.title}</p>
-          <p className="truncate text-sm text-slate-500">{done ? "Enviado com sucesso" : item.description}</p>
+          <p className="truncate text-sm text-slate-500">
+            {approved ? "Aprovado" : pendingReview ? "Em análise" : item.description}
+          </p>
         </div>
         {!done && (
           <span

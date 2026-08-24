@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Check, FileText, Loader2, X } from "lucide-react";
+import { Check, Clock, FileText, Loader2, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { publicApi, extractErrorMessage } from "../../lib/api";
 import type { ClientItem, ClientMedia } from "./types";
@@ -19,7 +19,9 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const done = item.status === "UPLOADED" || item.status === "APPROVED";
+  const approved = item.status === "APPROVED";
+  const pendingReview = item.status === "UPLOADED";
+  const done = pendingReview || approved;
 
   async function handleFileSelected(selected: FileList | null) {
     const file = selected?.[0];
@@ -48,7 +50,13 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
   return (
     <div
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
-        done ? "border-emerald-200" : missing ? "border-red-300" : "border-slate-200"
+        approved
+          ? "border-emerald-200"
+          : pendingReview
+          ? "border-amber-200"
+          : missing
+          ? "border-red-300"
+          : "border-slate-200"
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
@@ -59,15 +67,29 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
       >
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-            done ? "bg-emerald-100 text-emerald-600" : "bg-brand-50 text-brand-600"
+            approved
+              ? "bg-emerald-100 text-emerald-600"
+              : pendingReview
+              ? "bg-amber-100 text-amber-600"
+              : "bg-brand-50 text-brand-600"
           }`}
         >
-          {done ? <Check className="h-6 w-6" strokeWidth={2.5} /> : <FileText className="h-6 w-6" />}
+          {approved ? (
+            <Check className="h-6 w-6" strokeWidth={2.5} />
+          ) : pendingReview ? (
+            <Clock className="h-6 w-6" />
+          ) : (
+            <FileText className="h-6 w-6" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900">{item.title}</p>
           <p className="truncate text-sm text-slate-500">
-            {item.media.length > 0
+            {approved
+              ? "Aprovado"
+              : pendingReview
+              ? "Em análise"
+              : item.media.length > 0
               ? `${item.media.length} arquivo${item.media.length > 1 ? "s" : ""} enviado${item.media.length > 1 ? "s" : ""}`
               : item.description}
           </p>

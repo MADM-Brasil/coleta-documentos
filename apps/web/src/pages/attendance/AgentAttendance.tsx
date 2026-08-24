@@ -123,9 +123,14 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
                   </div>
                 </div>
                 <p className="font-semibold text-slate-900">Chamada do cliente</p>
-                <Button size="lg" onClick={session.acceptCall}>
-                  Aceitar chamada
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="lg" onClick={session.declineCall}>
+                    Recusar
+                  </Button>
+                  <Button size="lg" onClick={session.acceptCall}>
+                    Aceitar chamada
+                  </Button>
+                </div>
               </div>
             </div>
           )}

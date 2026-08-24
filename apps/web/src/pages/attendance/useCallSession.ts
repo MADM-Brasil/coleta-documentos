@@ -69,6 +69,7 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
 
     socket.on("call_incoming", () => setCallState((s) => (s === "active" ? s : "incoming")));
     socket.on("call_accepted", () => connectLiveKit());
+    socket.on("call_declined", () => setCallState("waiting_peer"));
     socket.on("call_ended", () => disconnectLiveKit());
 
     return () => {
@@ -140,6 +141,11 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     socketRef.current?.emit("call_accept");
   }
 
+  function declineCall() {
+    socketRef.current?.emit("call_decline");
+    setCallState("waiting_peer");
+  }
+
   function endCall() {
     socketRef.current?.emit("call_end");
     disconnectLiveKit();
@@ -170,6 +176,7 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     remoteVideoRef,
     remoteAudioRef,
     acceptCall,
+    declineCall,
     endCall,
     toggleMic,
     toggleCam,

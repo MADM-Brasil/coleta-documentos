@@ -14,6 +14,7 @@ export type RealtimeEvent =
   | "agent_left"
   | "call_incoming"
   | "call_accepted"
+  | "call_declined"
   | "call_ended"
   | "document_uploaded"
   | "document_approved"
@@ -75,6 +76,13 @@ export function initRealtime(httpServer: http.Server) {
     socket.on("call_accept", () => {
       if (role !== "AGENT") return;
       io!.to(room).emit("call_accepted");
+    });
+
+    // Consultor recusa a chamada — o cliente volta a esperar (sem cair na chamada
+    // nem receber acesso de vídeo nenhum, já que o LiveKit só conecta após "call_accept").
+    socket.on("call_decline", () => {
+      if (role !== "AGENT") return;
+      io!.to(room).emit("call_declined");
     });
 
     socket.on("call_end", () => {

@@ -163,7 +163,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
   return (
     <div className="flex h-screen w-full flex-col bg-white lg:flex-row">
       <div className="flex shrink-0 flex-col lg:h-screen lg:w-[38%]">
-        <div className="h-56 shrink-0 lg:h-auto lg:flex-1">{videoArea}</div>
+        <div className="h-56 min-h-0 shrink-0 overflow-hidden lg:h-auto lg:flex-1">{videoArea}</div>
         {videoControlsBar}
       </div>
 

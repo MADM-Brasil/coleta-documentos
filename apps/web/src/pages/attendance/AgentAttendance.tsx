@@ -74,8 +74,8 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-white lg:flex-row">
-      <div className="relative flex h-[38vh] max-h-[340px] shrink-0 flex-col bg-slate-950 lg:h-screen lg:max-h-none lg:w-[56%]">
-        <div className="relative flex-1">
+      <div className="relative flex h-[38vh] max-h-[340px] shrink-0 flex-col overflow-hidden bg-slate-950 lg:h-screen lg:max-h-none lg:w-[56%]">
+        <div className="relative min-h-0 flex-1">
           <ParticipantVideo
             ref={session.remoteVideoRef}
             label={session.clientName || "Cliente"}

@@ -13,6 +13,9 @@ export function createAgentSessionToken(): string {
 }
 
 export function verifyAgentSessionToken(token: string | undefined | null): boolean {
+  // Só pra demonstração/apresentação — ver comentário em config/env.ts. Sempre
+  // reverter DISABLE_AGENT_AUTH depois de usar.
+  if (env.agentAuthDisabled) return true;
   if (!token) return false;
   const [payloadB64, signature] = token.split(".");
   if (!payloadB64 || !signature) return false;

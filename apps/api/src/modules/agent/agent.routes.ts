@@ -23,6 +23,9 @@ const loginSchema = z.object({ password: z.string().min(1) });
 router.post(
   "/login",
   asyncHandler(async (req, res) => {
+    if (env.agentAuthDisabled) {
+      return res.json({ token: createAgentSessionToken() });
+    }
     if (!env.agentPassword) {
       throw Errors.validation("Painel do consultor ainda não configurado no servidor.");
     }

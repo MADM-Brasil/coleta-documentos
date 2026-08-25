@@ -34,4 +34,7 @@ export const env = {
   // futuro não deve exigir mudar o resto da arquitetura de sessão.
   agentPassword: process.env.AGENT_PASSWORD,
   agentSessionSecret: process.env.AGENT_SESSION_SECRET ?? "dev-only-troque-em-producao",
+  // Só pra demonstração/apresentação — desliga a exigência de login no painel do
+  // consultor (qualquer um com o link entra direto). NUNCA deixar "true" em produção.
+  agentAuthDisabled: process.env.DISABLE_AGENT_AUTH === "true",
 };

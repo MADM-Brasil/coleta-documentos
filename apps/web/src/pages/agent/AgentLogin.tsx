@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Lock } from "lucide-react";
 import { Button } from "../../components/ui/Button";
@@ -15,6 +15,30 @@ export function AgentLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Só aparece se a tentativa automática (abaixo) falhar — em uso normal, com o
+  // login exigido pelo servidor, isso acontece imediatamente e a tela nem pisca.
+  const [checkingAuto, setCheckingAuto] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Se DISABLE_AGENT_AUTH estiver ligado no servidor (só pra demonstração), o
+    // login aceita qualquer coisa — essa tentativa silenciosa entra direto sem
+    // mostrar a tela de senha pra ninguém.
+    agentApi
+      .post("/login", { password: "" })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setAgentSession(data.token);
+        navigate(next);
+      })
+      .catch(() => {
+        if (!cancelled) setCheckingAuto(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +53,14 @@ export function AgentLogin() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingAuto) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-white">
+        <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+      </div>
+    );
   }
 
   return (

@@ -25,6 +25,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   const [finalizing, setFinalizing] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [pipError, setPipError] = useState<string | null>(null);
+  // Clicar em qualquer um dos dois vídeos troca qual fica grande — não desconecta
+  // nem reanexa nada, só troca o tamanho/posição via CSS.
+  const [swapped, setSwapped] = useState(false);
   function setMediaErrorLocal(msg: string) {
     setPipError(msg);
   }
@@ -175,12 +178,23 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
     <div className="flex h-screen w-full flex-col overflow-hidden bg-white lg:flex-row">
       <div className="relative flex h-[38vh] max-h-[340px] shrink-0 flex-col overflow-hidden bg-slate-950 lg:h-screen lg:max-h-none lg:w-[56%]">
         <div className="relative min-h-0 flex-1">
-          <ParticipantVideo
-            ref={session.remoteVideoRef}
-            label={session.clientName || "Cliente"}
-            showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
-            micMuted={session.remoteMicMuted}
-          />
+          <button
+            type="button"
+            onClick={() => setSwapped((v) => !v)}
+            aria-label="Trocar vídeo principal"
+            className={
+              swapped
+                ? "absolute bottom-4 right-4 z-10 h-32 w-24 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-40 sm:w-32"
+                : "absolute inset-0"
+            }
+          >
+            <ParticipantVideo
+              ref={session.remoteVideoRef}
+              label={session.clientName || "Cliente"}
+              showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
+              micMuted={session.remoteMicMuted}
+            />
+          </button>
           <audio ref={session.remoteAudioRef} autoPlay />
 
           <div className="absolute left-4 top-4 flex items-center gap-2">
@@ -220,7 +234,16 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             </button>
           )}
 
-          <div className="absolute bottom-4 right-4 h-32 w-24 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-40 sm:w-32">
+          <button
+            type="button"
+            onClick={() => setSwapped((v) => !v)}
+            aria-label="Trocar vídeo principal"
+            className={
+              swapped
+                ? "absolute inset-0"
+                : "absolute bottom-4 right-4 z-10 h-32 w-24 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-40 sm:w-32"
+            }
+          >
             <ParticipantVideo
               ref={session.localVideoRef}
               label="Você"
@@ -228,7 +251,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
               showPlaceholder={session.callState !== "active"}
               micMuted={!session.micEnabled}
             />
-          </div>
+          </button>
 
           {session.callState === "incoming" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">

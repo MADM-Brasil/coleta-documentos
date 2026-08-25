@@ -27,6 +27,8 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
   const [errorMessage, setErrorMessage] = useState("");
   const [showMissing, setShowMissing] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  // Clicar em qualquer um dos dois vídeos troca qual fica grande.
+  const [swapped, setSwapped] = useState(false);
 
   useEffect(() => {
     publicApi
@@ -124,12 +126,23 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
 
   const videoArea = (
     <div className="relative h-full w-full bg-slate-900">
-      <ParticipantVideo
-        ref={session.remoteVideoRef}
-        label="Consultor"
-        showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
-        micMuted={session.remoteMicMuted}
-      />
+      <button
+        type="button"
+        onClick={() => setSwapped((v) => !v)}
+        aria-label="Trocar vídeo principal"
+        className={
+          swapped
+            ? "absolute bottom-3 right-3 z-10 h-20 w-16 overflow-hidden rounded-lg border-2 border-white/20 shadow-lg sm:h-28 sm:w-20"
+            : "absolute inset-0"
+        }
+      >
+        <ParticipantVideo
+          ref={session.remoteVideoRef}
+          label="Consultor"
+          showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
+          micMuted={session.remoteMicMuted}
+        />
+      </button>
       <audio ref={session.remoteAudioRef} autoPlay />
 
       <div className="absolute left-3 top-3">
@@ -139,7 +152,16 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
         />
       </div>
 
-      <div className="absolute bottom-3 right-3 h-20 w-16 overflow-hidden rounded-lg border-2 border-white/20 shadow-lg sm:h-28 sm:w-20">
+      <button
+        type="button"
+        onClick={() => setSwapped((v) => !v)}
+        aria-label="Trocar vídeo principal"
+        className={
+          swapped
+            ? "absolute inset-0"
+            : "absolute bottom-3 right-3 z-10 h-20 w-16 overflow-hidden rounded-lg border-2 border-white/20 shadow-lg sm:h-28 sm:w-20"
+        }
+      >
         <ParticipantVideo
           ref={session.localVideoRef}
           label="Você"
@@ -147,7 +169,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
           showPlaceholder={session.callState !== "active"}
           micMuted={!session.micEnabled}
         />
-      </div>
+      </button>
 
       {session.callState === "connecting" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">

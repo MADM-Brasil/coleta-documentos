@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { Room, RoomEvent, RemoteTrack, RemoteTrackPublication, RemoteParticipant, TrackPublication, Track } from "livekit-client";
+import { Room, RoomEvent, RemoteTrack, RemoteTrackPublication, RemoteParticipant, TrackPublication, Track, VideoPresets } from "livekit-client";
 import { videoApi, realtimeUrl } from "../../lib/videoApi";
 import { getAgentSession } from "../../lib/agentAuth";
 import type { CallState, Role } from "./types";
@@ -120,7 +120,18 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
         const { data } = await videoApi.post(`/${collectionId}/token`, token ? { token } : {});
         livekitCredsRef.current = { url: data.livekitUrl, jwt: data.livekitToken };
       }
-      const room = new Room();
+      // adaptiveStream/dynacast reduzem processamento em aparelhos fracos: só decodifica
+      // vídeo remoto no tamanho realmente exibido na tela, e para de codificar camadas
+      // de qualidade que ninguém está assistindo. Resolução de captura mais baixa (360p)
+      // também alivia bastante a câmera em celulares antigos, sem prejudicar muito a
+      // qualidade numa tela pequena de chamada.
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        videoCaptureDefaults: {
+          resolution: VideoPresets.h360.resolution,
+        },
+      });
       roomRef.current = room;
 
       room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, pub: RemoteTrackPublication, _p: RemoteParticipant) => {

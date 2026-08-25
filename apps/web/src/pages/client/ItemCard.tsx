@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { publicApi, extractErrorMessage } from "../../lib/api";
+import { CameraCaptureModal } from "./CameraCaptureModal";
 import type { ClientItem } from "./types";
 
 const ICONS: Record<ClientItem["type"], typeof IdCard> = {
@@ -54,6 +55,7 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [inPageCameraOpen, setInPageCameraOpen] = useState(false);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -283,7 +285,7 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={() => (video ? cameraInputRef.current?.click() : setInPageCameraOpen(true))}
                 className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 py-5 text-slate-700 transition-colors hover:border-brand-300 hover:bg-brand-50/50 active:scale-[0.98]"
               >
                 <Camera className="h-6 w-6 text-brand-600" />
@@ -379,6 +381,22 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
             </button>
           )}
         </div>
+      )}
+
+      {inPageCameraOpen && (
+        <CameraCaptureModal
+          onCapture={(capturedFile) => {
+            setInPageCameraOpen(false);
+            setError(null);
+            setFile(capturedFile);
+            setPreviewUrl(URL.createObjectURL(capturedFile));
+          }}
+          onClose={() => setInPageCameraOpen(false)}
+          onFallbackToSystemCamera={() => {
+            setInPageCameraOpen(false);
+            cameraInputRef.current?.click();
+          }}
+        />
       )}
     </div>
   );

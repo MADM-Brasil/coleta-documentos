@@ -7,7 +7,6 @@ import { Errors } from "../../lib/errors";
 import { generateDescriptiveStorageKey } from "../../lib/token";
 import { storageService } from "../storage";
 import { recordEvent } from "./events.service";
-import { notifyCallback } from "./callback.service";
 import { attachFileToKommoLead } from "../kommo/kommo-attachment.service";
 import { env } from "../../config/env";
 import { emitToRoom } from "../video/realtime";
@@ -166,16 +165,9 @@ router.post(
       await prisma.collectionRequest.update({ where: { id: req.collectionRequestId }, data: { status: "IN_PROGRESS" } });
     }
 
-    // Dispara em segundo plano — não atrasa a resposta ao cliente esperando o Make responder.
-    // O arquivo já vai embutido em base64 (quando não for grande demais) para o Make
-    // conseguir anexar direto na Kommo sem depender de buscar depois.
-    const downloadUrl = media.url ?? `${env.appUrl}/webhook/media/${media.id}`;
-    void notifyCallback(req.collectionRequestId!, item.type, downloadUrl, {
-      buffer: file.buffer,
-      mimeType,
-      filename: file.originalname,
-      publicId: env.storageProvider === "CLOUDINARY" ? media.storageKey : undefined,
-    });
+    // O Make só é notificado quando o consultor APROVA o documento (ver
+    // POST /api/video/:collectionId/items/:itemId/approve), não no upload — evita
+    // mandar pro CRM algo que ainda pode ser recusado e reenviado.
 
     // Anexa direto no lead da Kommo (nota nativa, com miniatura/download reais) quando
     // KOMMO_SUBDOMAIN e KOMMO_API_TOKEN estiverem configurados — sem eles, não faz nada.

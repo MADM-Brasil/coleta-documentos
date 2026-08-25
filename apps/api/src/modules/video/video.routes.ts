@@ -6,6 +6,7 @@ import { asyncHandler } from "../../middlewares/error";
 import { requireRoomAccess, requireAgent } from "../../middlewares/session-auth";
 import { Errors } from "../../lib/errors";
 import { recordEvent } from "../collections/events.service";
+import { notifyCallback } from "../collections/callback.service";
 import { createLiveKitToken, isLiveKitConfigured, roomNameFor } from "./livekit.service";
 import { emitToRoom } from "./realtime";
 
@@ -88,6 +89,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const item = await prisma.collectionItem.findFirst({
       where: { id: req.params.itemId, collectionRequestId: req.sessionCollectionId },
+      include: { mediaFiles: true },
     });
     if (!item) throw Errors.notFound("Item não encontrado.");
     if (item.status !== "UPLOADED") {
@@ -100,6 +102,14 @@ router.post(
     });
     await recordEvent(req.sessionCollectionId!, "item:approved", "SYSTEM", { itemId: item.id });
     emitToRoom(req.sessionCollectionId!, "document_approved", { itemId: item.id });
+
+    // Só agora (aprovado pelo consultor) o Make é notificado — não no upload, pra não
+    // mandar pro CRM algo que ainda pode ser recusado/reenviado.
+    const media = item.mediaFiles.filter((m) => m.status === "UPLOADED").at(-1);
+    if (media) {
+      const downloadUrl = media.url ?? `${env.appUrl}/webhook/media/${media.id}`;
+      void notifyCallback(req.sessionCollectionId!, item.type, downloadUrl);
+    }
 
     res.json({ item: updated });
   })

@@ -7,6 +7,8 @@ import { Errors } from "../../lib/errors";
 import { env } from "../../config/env";
 import { createAgentSessionToken, verifyAgentSessionToken } from "../../lib/agent-session";
 import { createCollectionRequest, reissueClientLink } from "../collections/collections.service";
+import { closeLiveKitRoom } from "../video/livekit.service";
+import { emitToRoom } from "../video/realtime";
 
 const router = Router();
 
@@ -102,6 +104,27 @@ router.post(
 
     const clientLink = await reissueClientLink(collection.id);
     res.json({ clientLink });
+  })
+);
+
+// Exclui/cancela uma sala: marca a coleta como CANCELLED (some da lista de ativas) e
+// força o fechamento da sala no LiveKit, derrubando qualquer conexão esquecida aberta
+// — evita minutos de chamada "presos" contando à toa numa aba que ninguém fechou.
+router.delete(
+  "/collections/:collectionId",
+  asyncHandler(async (req, res) => {
+    requireAgentAuth(req);
+    const collection = await prisma.collectionRequest.findUnique({ where: { id: req.params.collectionId } });
+    if (!collection) throw Errors.notFound("Atendimento não encontrado.");
+
+    emitToRoom(collection.id, "call_ended");
+    await closeLiveKitRoom(collection.id);
+    await prisma.collectionRequest.update({
+      where: { id: collection.id },
+      data: { status: "CANCELLED", cancelledAt: new Date() },
+    });
+
+    res.json({ ok: true });
   })
 );
 

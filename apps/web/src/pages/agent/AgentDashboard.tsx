@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clock, Headset, LogOut, Plus, Radio, Share2, Video } from "lucide-react";
+import { Clock, Headset, LogOut, Plus, Radio, Share2, Trash2, Video } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { agentApi } from "../../lib/videoApi";
 import { getAgentSession, clearAgentSession } from "../../lib/agentAuth";
@@ -93,6 +93,19 @@ export function AgentDashboard() {
     setCreating(false);
     setShare({ clientName, link: data.clientLink });
     loadCollections();
+  }
+
+  async function handleDelete(c: AgentCollectionSummary) {
+    if (!window.confirm(`Excluir a sala de ${c.clientName}? Isso encerra qualquer chamada em andamento nela.`)) return;
+    setBusy(true);
+    try {
+      await agentApi.delete(`/collections/${c.id}`);
+      loadCollections();
+    } catch {
+      setError("Não foi possível excluir a sala.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleShare(c: AgentCollectionSummary) {
@@ -208,18 +221,33 @@ export function AgentDashboard() {
                         </span>
                       </td>
                       <td className="px-5 py-3 text-slate-500">{formatDate(c.createdAt)}</td>
-                      <td className="px-5 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShare(c);
-                          }}
-                          disabled={busy}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                        >
-                          <Share2 className="h-3.5 w-3.5" /> Compartilhar
-                        </button>
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShare(c);
+                            }}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                          >
+                            <Share2 className="h-3.5 w-3.5" /> Compartilhar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(c);
+                            }}
+                            disabled={busy}
+                            aria-label="Excluir sala"
+                            title="Excluir sala"
+                            className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -1,9 +1,22 @@
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { env } from "../../config/env";
 import { SessionRole } from "../../middlewares/session-auth";
 
 export function isLiveKitConfigured(): boolean {
   return Boolean(env.livekitApiKey && env.livekitApiSecret && env.livekitUrl);
+}
+
+// Fecha a sala no servidor do LiveKit e desconecta à força qualquer participante que
+// ainda esteja nela — usado ao excluir/cancelar uma coleta, pra garantir que nenhuma
+// conexão fique "presa" consumindo minutos do plano por engano (aba esquecida aberta etc.).
+export async function closeLiveKitRoom(collectionId: string): Promise<void> {
+  if (!isLiveKitConfigured()) return;
+  const client = new RoomServiceClient(env.livekitUrl!, env.livekitApiKey!, env.livekitApiSecret!);
+  try {
+    await client.deleteRoom(roomNameFor(collectionId));
+  } catch {
+    // Sala pode já não existir (ninguém entrou ainda) — não é erro de verdade.
+  }
 }
 
 export function roomNameFor(collectionId: string): string {

@@ -179,6 +179,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             ref={session.remoteVideoRef}
             label={session.clientName || "Cliente"}
             showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
+            micMuted={session.remoteMicMuted}
           />
           <audio ref={session.remoteAudioRef} autoPlay />
 
@@ -220,7 +221,13 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
           )}
 
           <div className="absolute bottom-4 right-4 h-32 w-24 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg sm:h-40 sm:w-32">
-            <ParticipantVideo ref={session.localVideoRef} label="Você" muted showPlaceholder={session.callState !== "active"} />
+            <ParticipantVideo
+              ref={session.localVideoRef}
+              label="Você"
+              muted
+              showPlaceholder={session.callState !== "active"}
+              micMuted={!session.micEnabled}
+            />
           </div>
 
           {session.callState === "incoming" && (

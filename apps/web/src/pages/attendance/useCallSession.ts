@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { Room, RoomEvent, RemoteTrack, RemoteTrackPublication, RemoteParticipant, Track } from "livekit-client";
+import { Room, RoomEvent, RemoteTrack, RemoteTrackPublication, RemoteParticipant, TrackPublication, Track } from "livekit-client";
 import { videoApi, realtimeUrl } from "../../lib/videoApi";
 import { getAgentSession } from "../../lib/agentAuth";
 import type { CallState, Role } from "./types";
@@ -33,6 +33,9 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   // uma tela preta "muda" quando a chamada já está "active" mas o outro lado ainda não
   // publicou a câmera (permissão lenta, rede ruim etc.).
   const [remoteVideoActive, setRemoteVideoActive] = useState(false);
+  // true quando o microfone do OUTRO participante está mudo — mostrado como um
+  // ícone sobre o vídeo dele, pra cada lado saber que o outro está sem áudio.
+  const [remoteMicMuted, setRemoteMicMuted] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const roomRef = useRef<Room | null>(null);
@@ -126,7 +129,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
           else remoteCameraTrackRef.current = track;
           renderRemoteVideo();
         }
-        if (track.kind === Track.Kind.Audio && remoteAudioRef.current) track.attach(remoteAudioRef.current);
+        if (track.kind === Track.Kind.Audio) {
+          if (remoteAudioRef.current) track.attach(remoteAudioRef.current);
+          setRemoteMicMuted(pub.isMuted);
+        }
       });
       room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, pub: RemoteTrackPublication) => {
         if (track.kind !== Track.Kind.Video) return;
@@ -134,11 +140,20 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
         else remoteCameraTrackRef.current = null;
         renderRemoteVideo();
       });
+      // O evento dispara pra qualquer participante (inclusive a gente mesmo) — só
+      // nos interessa quando é o áudio do OUTRO lado.
+      room.on(RoomEvent.TrackMuted, (pub: TrackPublication, participant) => {
+        if (pub.kind === Track.Kind.Audio && participant.sid !== room.localParticipant.sid) setRemoteMicMuted(true);
+      });
+      room.on(RoomEvent.TrackUnmuted, (pub: TrackPublication, participant) => {
+        if (pub.kind === Track.Kind.Audio && participant.sid !== room.localParticipant.sid) setRemoteMicMuted(false);
+      });
       room.on(RoomEvent.Disconnected, () => {
         remoteCameraTrackRef.current = null;
         remoteScreenTrackRef.current = null;
         setRemoteVideoActive(false);
         setRemoteScreenSharing(false);
+        setRemoteMicMuted(false);
         setCallState("ended");
       });
 
@@ -226,6 +241,7 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     connectionError,
     clientName,
     remoteVideoActive,
+    remoteMicMuted,
     localVideoRef,
     remoteVideoRef,
     remoteAudioRef,

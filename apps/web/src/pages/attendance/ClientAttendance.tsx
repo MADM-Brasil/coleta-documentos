@@ -128,6 +128,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
         ref={session.remoteVideoRef}
         label="Consultor"
         showPlaceholder={session.callState !== "active" || !session.remoteVideoActive}
+        micMuted={session.remoteMicMuted}
       />
       <audio ref={session.remoteAudioRef} autoPlay />
 
@@ -139,7 +140,13 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
       </div>
 
       <div className="absolute bottom-3 right-3 h-20 w-16 overflow-hidden rounded-lg border-2 border-white/20 shadow-lg sm:h-28 sm:w-20">
-        <ParticipantVideo ref={session.localVideoRef} label="Você" muted showPlaceholder={session.callState !== "active"} />
+        <ParticipantVideo
+          ref={session.localVideoRef}
+          label="Você"
+          muted
+          showPlaceholder={session.callState !== "active"}
+          micMuted={!session.micEnabled}
+        />
       </div>
 
       {session.callState === "connecting" && (

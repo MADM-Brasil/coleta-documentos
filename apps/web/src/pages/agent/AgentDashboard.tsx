@@ -88,8 +88,8 @@ export function AgentDashboard() {
     navigate("/painel/login");
   }
 
-  async function handleCreate(clientName: string, agentName: string) {
-    const { data } = await agentApi.post("/collections", { name: clientName, agentName });
+  async function handleCreate(clientName: string, agentName: string, externalId?: string) {
+    const { data } = await agentApi.post("/collections", { name: clientName, agentName, externalId });
     setCreating(false);
     setShare({ clientName, link: data.clientLink });
     loadCollections();

@@ -63,7 +63,13 @@ router.get(
   })
 );
 
-const createSessionSchema = z.object({ name: z.string().min(1), agentName: z.string().min(1).optional() });
+const createSessionSchema = z.object({
+  name: z.string().min(1),
+  agentName: z.string().min(1).optional(),
+  // ID do lead no CRM (Kommo/HubSpot) — sem isso, o webhook pro Make sai com
+  // leadId vazio e ele não sabe em qual lead anexar o documento.
+  externalId: z.string().min(1).optional(),
+});
 
 // Criação manual de uma sessão de atendimento pelo consultor (fora do fluxo automático
 // do Make) — gera a coleta e devolve o clientLink pronto pra compartilhar (ex: WhatsApp).
@@ -71,9 +77,14 @@ router.post(
   "/collections",
   asyncHandler(async (req, res) => {
     requireAgentAuth(req);
-    const { name, agentName } = createSessionSchema.parse(req.body);
+    const { name, agentName, externalId } = createSessionSchema.parse(req.body);
 
-    const { collection, clientLink } = await createCollectionRequest({ name, agentName, expiresInDays: 2 });
+    const { collection, clientLink } = await createCollectionRequest({
+      name,
+      agentName,
+      externalId,
+      expiresInDays: 2,
+    });
 
     res.status(201).json({ collectionId: collection.id, clientLink });
   })

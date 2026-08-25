@@ -3,13 +3,14 @@ import { Loader2, Video, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 
 interface NewRoomModalProps {
-  onCreate: (clientName: string, agentName: string) => Promise<void>;
+  onCreate: (clientName: string, agentName: string, externalId?: string) => Promise<void>;
   onClose: () => void;
 }
 
 export function NewRoomModal({ onCreate, onClose }: NewRoomModalProps) {
   const [clientName, setClientName] = useState("");
   const [agentName, setAgentName] = useState("");
+  const [externalId, setExternalId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,7 +20,7 @@ export function NewRoomModal({ onCreate, onClose }: NewRoomModalProps) {
     setBusy(true);
     setError("");
     try {
-      await onCreate(clientName.trim(), agentName.trim());
+      await onCreate(clientName.trim(), agentName.trim(), externalId.trim() || undefined);
     } catch {
       setError("Não foi possível criar a sala. Tente novamente.");
     } finally {
@@ -59,6 +60,18 @@ export function NewRoomModal({ onCreate, onClose }: NewRoomModalProps) {
               placeholder="Digite o nome do consultor"
               className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+              ID do lead <span className="font-normal text-slate-400">(opcional)</span>
+            </label>
+            <input
+              value={externalId}
+              onChange={(e) => setExternalId(e.target.value)}
+              placeholder="Ex: ID do lead na Kommo/HubSpot"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+            <p className="mt-1 text-xs text-slate-400">Se preenchido, os documentos enviados nessa sala já chegam identificados no Make.</p>
           </div>
 
           {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}

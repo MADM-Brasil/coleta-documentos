@@ -29,6 +29,10 @@ export interface ClientItem {
   media: ClientMedia[];
 }
 
+// Itens em PDF (sem câmera/gravação) usam o MultiItemCard — os demais (foto, áudio,
+// vídeo) usam o ItemCard, que já sabe lidar com "multiple" e mantém câmera/microfone.
+export const PDF_MULTI_TYPES = new Set(["CTPS", "LAUDO_MEDICO", "CARTA_CONCESSAO", "COPIA_PROCESSO", "CAT"]);
+
 export interface ClientCollection {
   id: string;
   status: string;

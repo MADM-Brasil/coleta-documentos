@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ItemCard } from "../client/ItemCard";
 import { MultiItemCard } from "../client/MultiItemCard";
-import type { ClientCollection as ClientCollectionData, ClientMedia } from "../client/types";
+import { PDF_MULTI_TYPES, type ClientCollection as ClientCollectionData, type ClientMedia } from "../client/types";
 import { useCallSession } from "./useCallSession";
 import { ParticipantVideo } from "./components/ParticipantVideo";
 import { VideoControls } from "./components/VideoControls";
@@ -332,7 +332,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
                       {item.type === "CTPS" && (
                         <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
                       )}
-                      {item.multiple ? (
+                      {item.multiple && PDF_MULTI_TYPES.has(item.type) ? (
                         <MultiItemCard token={token} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
                       ) : (
                         <ItemCard

@@ -4,18 +4,21 @@ export const DEFAULT_ITEMS = [
     title: "Documento de identificação (Frente)",
     description: "Envie uma foto legível da frente do seu RG ou CNH.",
     sortOrder: 1,
+    multiple: true,
   },
   {
     type: "RG_VERSO" as const,
     title: "Documento de identificação (Verso)",
     description: "Envie uma foto legível do verso do seu RG ou CNH.",
     sortOrder: 2,
+    multiple: true,
   },
   {
     type: "COMPROVANTE" as const,
     title: "Comprovante",
     description: "Envie uma foto do seu comprovante.",
     sortOrder: 3,
+    multiple: true,
   },
   {
     type: "AUDIO" as const,

@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ItemCard } from "./ItemCard";
 import { MultiItemCard } from "./MultiItemCard";
-import type { ClientCollection as ClientCollectionData, ClientMedia } from "./types";
+import { PDF_MULTI_TYPES, type ClientCollection as ClientCollectionData, type ClientMedia } from "./types";
 
 type Stage = "loading" | "error" | "intro" | "checklist" | "completed";
 
@@ -168,7 +168,7 @@ export function ClientCollection() {
                 {item.type === "CTPS" && (
                   <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
                 )}
-                {item.multiple ? (
+                {item.multiple && PDF_MULTI_TYPES.has(item.type) ? (
                   <MultiItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
                 ) : (
                   <ItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />

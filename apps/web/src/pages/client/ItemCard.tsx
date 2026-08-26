@@ -18,7 +18,7 @@ import {
 import { Button } from "../../components/ui/Button";
 import { publicApi, extractErrorMessage } from "../../lib/api";
 import { CameraCaptureModal } from "./CameraCaptureModal";
-import type { ClientItem } from "./types";
+import type { ClientItem, ClientMedia } from "./types";
 
 const ICONS: Record<ClientItem["type"], typeof IdCard> = {
   RG_FRENTE: IdCard,
@@ -42,7 +42,7 @@ interface ItemCardProps {
   token: string;
   item: ClientItem;
   index: number;
-  onUploaded: (itemId: string, collectionStatus: string) => void;
+  onUploaded: (itemId: string, collectionStatus: string, media?: ClientMedia) => void;
   missing?: boolean;
   // true enquanto o consultor está gravando o áudio/vídeo desse item direto da chamada —
   // esconde os controles de gravação do cliente e mostra só um status.
@@ -87,6 +87,9 @@ export function ItemCard({
   const approved = item.status === "APPROVED";
   const pendingReview = item.status === "UPLOADED";
   const done = pendingReview || approved;
+  // Itens "multiple" (ex: várias fotos do mesmo documento) continuam permitindo
+  // adicionar mais arquivos mesmo depois de já ter algo enviado/em análise/aprovado.
+  const canOpen = !done || item.multiple;
   const video = isVideoType(item.type);
   const audio = isAudioType(item.type);
   const pdfOnly = isPdfOnlyType(item.type);
@@ -176,9 +179,11 @@ export function ItemCard({
           if (evt.total) setProgress(Math.round((evt.loaded / evt.total) * 100));
         },
       });
-      onUploaded(item.id, data.collectionStatus);
-      setOpen(false);
+      onUploaded(item.id, data.collectionStatus, data.media);
       reset();
+      // Item de arquivo único: fecha o card. Item "multiple": mantém aberto pra
+      // facilitar adicionar mais uma foto em seguida.
+      if (!item.multiple) setOpen(false);
     } catch (err) {
       setError(extractErrorMessage(err, "Não conseguimos enviar seu documento. Verifique sua conexão e tente novamente."));
     } finally {
@@ -209,7 +214,7 @@ export function ItemCard({
     >
       <button
         type="button"
-        onClick={() => !done && !captureActive && setOpen((v) => !v)}
+        onClick={() => canOpen && !captureActive && setOpen((v) => !v)}
         className="flex w-full items-center gap-4 p-4 text-left active:bg-slate-50"
       >
         <div
@@ -237,7 +242,9 @@ export function ItemCard({
               : approved
               ? "Aprovado"
               : pendingReview
-              ? "Em análise"
+              ? item.multiple && item.media.length > 0
+                ? `${item.media.length} arquivo${item.media.length > 1 ? "s" : ""} enviado${item.media.length > 1 ? "s" : ""} — em análise`
+                : "Em análise"
               : item.description}
           </p>
         </div>
@@ -246,7 +253,7 @@ export function ItemCard({
             <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-red-600" /> Gravando
           </span>
         )}
-        {!done && !captureActive && (
+        {canOpen && !captureActive && (
           <span
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
               item.status === "REJECTED"
@@ -256,7 +263,11 @@ export function ItemCard({
                 : "bg-slate-100 text-slate-600"
             }`}
           >
-            {item.status === "REJECTED" ? "Enviar novamente" : "Enviar"}
+            {item.status === "REJECTED"
+              ? "Enviar novamente"
+              : item.multiple && item.media.length > 0
+              ? "Adicionar"
+              : "Enviar"}
           </span>
         )}
       </button>
@@ -296,10 +307,24 @@ export function ItemCard({
         </div>
       )}
 
-      {open && !done && !captureActive && (
+      {open && canOpen && !captureActive && (
         <div className="border-t border-slate-100 p-4 animate-fade-in">
           {item.instructions && (
             <div className="mb-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">{item.instructions}</div>
+          )}
+
+          {item.multiple && item.media.length > 0 && !previewUrl && (
+            <ul className="mb-4 space-y-2">
+              {item.media.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-brand-600" />
+                  <span className="truncate">{m.originalFilename}</span>
+                </li>
+              ))}
+            </ul>
           )}
 
           {!previewUrl && audio && (

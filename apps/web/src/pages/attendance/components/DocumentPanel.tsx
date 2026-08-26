@@ -11,9 +11,24 @@ interface DocumentPanelProps {
   onFinalize: () => void;
   finalizing: boolean;
   onShare?: () => void;
+  recordingItemId?: string | null;
+  onStartAudioCapture?: (itemId: string) => void;
+  onCancelAudioCapture?: (itemId: string) => void;
+  onStopAudioCapture?: (itemId: string) => void;
 }
 
-export function DocumentPanel({ collection, onApprove, onReject, onFinalize, finalizing, onShare }: DocumentPanelProps) {
+export function DocumentPanel({
+  collection,
+  onApprove,
+  onReject,
+  onFinalize,
+  finalizing,
+  onShare,
+  recordingItemId,
+  onStartAudioCapture,
+  onCancelAudioCapture,
+  onStopAudioCapture,
+}: DocumentPanelProps) {
   const approved = collection.items.filter((i) => i.status === "APPROVED").length;
   const total = collection.items.length;
   const requiredPending = collection.items.some((i) => i.required && i.status !== "APPROVED");
@@ -43,7 +58,16 @@ export function DocumentPanel({ collection, onApprove, onReject, onFinalize, fin
 
       <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
         {collection.items.map((item) => (
-          <DocumentCard key={item.id} item={item} onApprove={onApprove} onReject={onReject} />
+          <DocumentCard
+            key={item.id}
+            item={item}
+            onApprove={onApprove}
+            onReject={onReject}
+            isRecordingAudio={recordingItemId === item.id}
+            onStartAudioCapture={onStartAudioCapture ? () => onStartAudioCapture(item.id) : undefined}
+            onCancelAudioCapture={onCancelAudioCapture ? () => onCancelAudioCapture(item.id) : undefined}
+            onStopAudioCapture={onStopAudioCapture ? () => onStopAudioCapture(item.id) : undefined}
+          />
         ))}
       </div>
 

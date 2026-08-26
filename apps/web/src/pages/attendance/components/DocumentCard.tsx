@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Clock, Eye, RotateCcw, ShieldAlert, Loader2 } from "lucide-react";
+import { Check, Clock, Eye, Mic, RotateCcw, ShieldAlert, Loader2, Square, X } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import type { AgentItem } from "../types";
@@ -24,9 +24,21 @@ interface DocumentCardProps {
   item: AgentItem;
   onApprove: (itemId: string) => Promise<void>;
   onReject: (itemId: string, reason: string) => Promise<void>;
+  isRecordingAudio?: boolean;
+  onStartAudioCapture?: () => void;
+  onCancelAudioCapture?: () => void;
+  onStopAudioCapture?: () => void;
 }
 
-export function DocumentCard({ item, onApprove, onReject }: DocumentCardProps) {
+export function DocumentCard({
+  item,
+  onApprove,
+  onReject,
+  isRecordingAudio,
+  onStartAudioCapture,
+  onCancelAudioCapture,
+  onStopAudioCapture,
+}: DocumentCardProps) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,6 +47,8 @@ export function DocumentCard({ item, onApprove, onReject }: DocumentCardProps) {
   const media = item.media[item.media.length - 1];
   const canReview = item.status === "UPLOADED";
   const mediaUrl = media ? media.url ?? `${apiBaseUrl}/webhook/media/${media.id}` : null;
+  const canRecordAudio =
+    item.type === "AUDIO" && (item.status === "PENDING" || item.status === "REJECTED") && onStartAudioCapture;
 
   async function handleApprove() {
     setBusy(true);
@@ -91,6 +105,40 @@ export function DocumentCard({ item, onApprove, onReject }: DocumentCardProps) {
           filename={media.originalFilename}
           onClose={() => setPreviewOpen(false)}
         />
+      )}
+
+      {isRecordingAudio && (
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-red-700">
+            <span className="h-2 w-2 animate-pulse-dot rounded-full bg-red-600" /> Gravando o áudio do cliente...
+          </span>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={onCancelAudioCapture}
+              aria-label="Cancelar gravação"
+              title="Cancelar"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-red-500 hover:bg-red-100"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onStopAudioCapture}
+              aria-label="Parar e enviar"
+              title="Parar e enviar"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-red-600 text-white hover:bg-red-700"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isRecordingAudio && canRecordAudio && (
+        <Button size="sm" variant="outline" className="mt-3 w-full" onClick={onStartAudioCapture}>
+          <Mic className="h-3.5 w-3.5" /> Gravar áudio do cliente
+        </Button>
       )}
 
       {canReview && !rejecting && (

@@ -44,9 +44,12 @@ interface ItemCardProps {
   index: number;
   onUploaded: (itemId: string, collectionStatus: string) => void;
   missing?: boolean;
+  // true enquanto o consultor está gravando o áudio desse item direto da chamada —
+  // esconde os controles de gravação do cliente e mostra só um status.
+  audioCaptureActive?: boolean;
 }
 
-export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardProps) {
+export function ItemCard({ token, item, index, onUploaded, missing, audioCaptureActive }: ItemCardProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -170,7 +173,7 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
     >
       <button
         type="button"
-        onClick={() => !done && setOpen((v) => !v)}
+        onClick={() => !done && !audioCaptureActive && setOpen((v) => !v)}
         className="flex w-full items-center gap-4 p-4 text-left active:bg-slate-50"
       >
         <div
@@ -193,10 +196,21 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900">{item.title}</p>
           <p className="truncate text-sm text-slate-500">
-            {approved ? "Aprovado" : pendingReview ? "Em análise" : item.description}
+            {audioCaptureActive
+              ? "Áudio em andamento"
+              : approved
+              ? "Aprovado"
+              : pendingReview
+              ? "Em análise"
+              : item.description}
           </p>
         </div>
-        {!done && (
+        {audioCaptureActive && (
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700">
+            <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-red-600" /> Gravando
+          </span>
+        )}
+        {!done && !audioCaptureActive && (
           <span
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
               item.status === "REJECTED"
@@ -218,7 +232,7 @@ export function ItemCard({ token, item, index, onUploaded, missing }: ItemCardPr
         </div>
       )}
 
-      {open && !done && (
+      {open && !done && !audioCaptureActive && (
         <div className="border-t border-slate-100 p-4 animate-fade-in">
           {item.instructions && (
             <div className="mb-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">{item.instructions}</div>

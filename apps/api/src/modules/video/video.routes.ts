@@ -1,16 +1,24 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { asyncHandler } from "../../middlewares/error";
 import { requireRoomAccess, requireAgent } from "../../middlewares/session-auth";
 import { Errors } from "../../lib/errors";
+import { generateDescriptiveStorageKey } from "../../lib/token";
+import { storageService } from "../storage";
 import { recordEvent } from "../collections/events.service";
 import { notifyCallback } from "../collections/callback.service";
 import { createLiveKitToken, isLiveKitConfigured, roomNameFor } from "./livekit.service";
 import { emitToRoom } from "./realtime";
 
 const router = Router();
+
+const uploadAudio = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: env.maxFileSizeMb * 1024 * 1024 },
+});
 
 // Camada nova sobre a coleta existente — nenhuma rota aqui substitui ou altera
 // /webhook/* ou /public/collections/* (upload, callback ao Make continuam intactos).
@@ -134,6 +142,54 @@ router.post(
     emitToRoom(req.sessionCollectionId!, "document_rejected", { itemId: item.id, reason });
 
     res.json({ item: updated });
+  })
+);
+
+// Consultor grava o áudio do cliente durante a chamada (a partir do track de áudio já
+// recebido via WebRTC) e envia direto — o cliente só vê "Áudio em andamento", sem
+// precisar gravar nada pelo próprio celular.
+router.post(
+  "/:collectionId/items/:itemId/audio-upload",
+  requireRoomAccess,
+  requireAgent,
+  uploadAudio.single("file"),
+  asyncHandler(async (req, res) => {
+    const file = req.file;
+    if (!file) throw Errors.validation("Nenhum áudio recebido.");
+
+    const item = await prisma.collectionItem.findFirst({
+      where: { id: req.params.itemId, collectionRequestId: req.sessionCollectionId },
+    });
+    if (!item) throw Errors.notFound("Item não encontrado.");
+
+    const storageKey = generateDescriptiveStorageKey(item.type, null, file.originalname);
+    const uploadResult = await storageService.upload(file.buffer, { key: storageKey, mimeType: file.mimetype });
+
+    const media = await prisma.mediaFile.create({
+      data: {
+        collectionItemId: item.id,
+        storageProvider: env.storageProvider,
+        storageKey: uploadResult.key,
+        url: env.storageProvider === "CLOUDINARY" ? uploadResult.url : null,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+        originalFilename: file.originalname,
+        status: "UPLOADED",
+      },
+    });
+
+    await prisma.collectionItem.update({
+      where: { id: item.id },
+      data: { status: "UPLOADED", rejectionReason: null },
+    });
+    await recordEvent(req.sessionCollectionId!, "media:uploaded", "SYSTEM", {
+      itemId: item.id,
+      itemTitle: item.title,
+      mediaId: media.id,
+    });
+    emitToRoom(req.sessionCollectionId!, "document_uploaded", { itemId: item.id });
+
+    res.status(201).json({ media, itemStatus: "UPLOADED" });
   })
 );
 

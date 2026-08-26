@@ -19,7 +19,9 @@ export type RealtimeEvent =
   | "document_uploaded"
   | "document_approved"
   | "document_rejected"
-  | "collection_completed";
+  | "collection_completed"
+  | "audio_capture_start"
+  | "audio_capture_cancel";
 
 let io: Server | null = null;
 
@@ -87,6 +89,17 @@ export function initRealtime(httpServer: http.Server) {
 
     socket.on("call_end", () => {
       io!.to(room).emit("call_ended");
+    });
+
+    // Consultor avisa o cliente que está gravando o áudio dele (o cliente só vê um
+    // status "Áudio em andamento", sem controles próprios de gravação nesse item).
+    socket.on("audio_capture_start", (payload: { itemId: string }) => {
+      if (role !== "AGENT") return;
+      io!.to(room).emit("audio_capture_start", payload);
+    });
+    socket.on("audio_capture_cancel", (payload: { itemId: string }) => {
+      if (role !== "AGENT") return;
+      io!.to(room).emit("audio_capture_cancel", payload);
     });
 
     socket.on("disconnect", () => {

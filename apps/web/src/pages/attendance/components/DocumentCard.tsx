@@ -6,6 +6,44 @@ import type { AgentItem } from "../types";
 
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "";
 
+// Motivos pré-definidos pra recusar, separados por tipo de item — foto, vídeo, áudio e
+// documentos em PDF têm problemas bem diferentes entre si.
+const PHOTO_REASONS = [
+  "Foto cortada/incompleta",
+  "Foto borrada/fora de foco",
+  "Documento ilegível",
+  "Foto muito escura",
+  "Reflexo/brilho cobrindo o documento",
+  "Documento errado enviado",
+];
+const VIDEO_REASONS = [
+  "Vídeo cortado/incompleto",
+  "Movimento não aparece com clareza",
+  "Vídeo escuro ou com baixa qualidade",
+  "Ângulo não mostra o que foi pedido",
+  "Vídeo não corresponde ao solicitado",
+];
+const AUDIO_REASONS = [
+  "Áudio cortado/incompleto",
+  "Áudio muito baixo/inaudível",
+  "Muito ruído de fundo",
+  "Conteúdo não corresponde ao solicitado",
+];
+const PDF_REASONS = [
+  "Arquivo corrompido/não abre",
+  "Documento incompleto",
+  "Faltam páginas",
+  "Documento errado enviado",
+  "Baixa qualidade/ilegível",
+];
+
+function reasonOptionsFor(type: string): string[] {
+  if (type === "VIDEO") return VIDEO_REASONS;
+  if (type === "AUDIO") return AUDIO_REASONS;
+  if (type === "RG_FRENTE" || type === "RG_VERSO" || type === "COMPROVANTE") return PHOTO_REASONS;
+  return PDF_REASONS;
+}
+
 const STATUS_LABEL: Record<AgentItem["status"], string> = {
   PENDING: "Pendente",
   UPLOADED: "Em análise",
@@ -45,6 +83,7 @@ export function DocumentCard({
 }: DocumentCardProps) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [customReason, setCustomReason] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   // O botão de gravar fica escondido até o consultor clicar no card — evita poluir
@@ -96,6 +135,7 @@ export function DocumentCard({
       await onReject(item.id, reason.trim());
       setRejecting(false);
       setReason("");
+      setCustomReason(false);
     } finally {
       setBusy(false);
     }
@@ -216,7 +256,17 @@ export function DocumentCard({
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
             Aprovar
           </Button>
-          <Button size="sm" variant="outline" className="flex-1" onClick={() => setRejecting(true)} disabled={busy}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              setRejecting(true);
+              setReason("");
+              setCustomReason(false);
+            }}
+            disabled={busy}
+          >
             <RotateCcw className="h-3.5 w-3.5" /> Solicitar novamente
           </Button>
         </div>
@@ -224,15 +274,61 @@ export function DocumentCard({
 
       {canReview && rejecting && (
         <div className="mt-3 space-y-2">
-          <input
-            autoFocus
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Motivo (ex: imagem cortada)"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          />
+          <div className="flex flex-col gap-1.5">
+            {reasonOptionsFor(item.type).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setReason(option);
+                  setCustomReason(false);
+                }}
+                className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                  !customReason && reason === option
+                    ? "border-brand-500 bg-brand-50 text-brand-700 font-medium"
+                    : "border-slate-200 text-slate-700 hover:border-brand-300 hover:bg-brand-50/50"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setCustomReason(true);
+                setReason("");
+              }}
+              className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                customReason
+                  ? "border-brand-500 bg-brand-50 text-brand-700 font-medium"
+                  : "border-slate-200 text-slate-700 hover:border-brand-300 hover:bg-brand-50/50"
+              }`}
+            >
+              Outro motivo...
+            </button>
+          </div>
+
+          {customReason && (
+            <input
+              autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Descreva o motivo"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          )}
+
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" className="flex-1" onClick={() => setRejecting(false)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="flex-1"
+              onClick={() => {
+                setRejecting(false);
+                setReason("");
+                setCustomReason(false);
+              }}
+            >
               Cancelar
             </Button>
             <Button size="sm" variant="danger" className="flex-1" onClick={handleReject} disabled={!reason.trim() || busy}>

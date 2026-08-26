@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Clock, Eye, Mic, RotateCcw, ShieldAlert, Loader2, Square, X } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
@@ -49,6 +49,22 @@ export function DocumentCard({
   const mediaUrl = media ? media.url ?? `${apiBaseUrl}/webhook/media/${media.id}` : null;
   const canRecordAudio =
     item.type === "AUDIO" && (item.status === "PENDING" || item.status === "REJECTED") && onStartAudioCapture;
+
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  useEffect(() => {
+    if (!isRecordingAudio) {
+      setRecordSeconds(0);
+      return;
+    }
+    const interval = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isRecordingAudio]);
+
+  function formatTime(seconds: number) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
   async function handleApprove() {
     setBusy(true);
@@ -109,8 +125,12 @@ export function DocumentCard({
 
       {isRecordingAudio && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-red-700">
-            <span className="h-2 w-2 animate-pulse-dot rounded-full bg-red-600" /> Gravando o áudio do cliente...
+          <span className="flex items-center gap-2 text-sm font-medium text-red-700">
+            <span className="relative flex h-3 w-3 items-center justify-center">
+              <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-75" />
+              <span className="relative h-2 w-2 rounded-full bg-red-600" />
+            </span>
+            Gravando o áudio do cliente... {formatTime(recordSeconds)}
           </span>
           <div className="flex gap-1.5">
             <button

@@ -59,6 +59,7 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
   const [recording, setRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [inPageCameraOpen, setInPageCameraOpen] = useState(false);
+  const [captureSeconds, setCaptureSeconds] = useState(0);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +80,15 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!audioCaptureActive) {
+      setCaptureSeconds(0);
+      return;
+    }
+    const interval = setInterval(() => setCaptureSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [audioCaptureActive]);
 
   function handleFileSelected(selected: FileList | null) {
     const picked = selected?.[0];
@@ -161,7 +171,9 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
   return (
     <div
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
-        approved
+        audioCaptureActive
+          ? "border-red-300"
+          : approved
           ? "border-emerald-200"
           : pendingReview
           ? "border-amber-200"
@@ -224,6 +236,19 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
           </span>
         )}
       </button>
+
+      {audioCaptureActive && (
+        <div className="flex flex-col items-center gap-2 border-t border-red-100 bg-red-50/60 py-5">
+          <span className="relative flex h-14 w-14 items-center justify-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-60" />
+            <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+              <Mic className="h-6 w-6 text-red-600" />
+            </span>
+          </span>
+          <p className="text-sm font-semibold text-red-700">Áudio em andamento</p>
+          <p className="text-xs text-red-500">{formatTime(captureSeconds)}</p>
+        </div>
+      )}
 
       {item.status === "REJECTED" && item.rejectionReason && (
         <div className="mx-4 mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

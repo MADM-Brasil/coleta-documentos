@@ -248,10 +248,16 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
   // que ela esteja em exibição no momento) com o áudio dele — usado pelo consultor pra
   // gravar o "vídeo da limitação" direto da chamada, sem depender do cliente gravar.
   function getRemoteCameraStream(): MediaStream | null {
-    const camTrack = remoteCameraTrackRef.current;
-    if (!camTrack) return null;
+    // Captura do próprio <video> já em reprodução (captureStream), em vez do track
+    // "cru" da chamada — pegar o track direto às vezes gerava um arquivo com duração
+    // zerada (a gravação começava antes do primeiro frame de fato decodificar).
+    const videoEl = remoteVideoRef.current as (HTMLVideoElement & { captureStream?: () => MediaStream }) | null;
+    if (!videoEl?.captureStream || videoEl.readyState < 2) return null;
+    const captured = videoEl.captureStream();
     const audioStream = remoteAudioRef.current?.srcObject as MediaStream | null;
-    return new MediaStream([camTrack.mediaStreamTrack, ...(audioStream?.getAudioTracks() ?? [])]);
+    const videoTracks = captured.getVideoTracks();
+    if (videoTracks.length === 0) return null;
+    return new MediaStream([...videoTracks, ...(audioStream?.getAudioTracks() ?? [])]);
   }
 
   return {

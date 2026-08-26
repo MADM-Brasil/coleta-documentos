@@ -29,6 +29,11 @@ const ALLOWED_MIME = new Set([
   "audio/x-wav",
 ]);
 
+// Documentos que só aceitam PDF, independente de "multiple" (acumular mais de um
+// arquivo é uma coisa; exigir PDF é outra — itens de foto/áudio/vídeo também podem
+// aceitar múltiplos arquivos sem virar "só PDF").
+const PDF_ONLY_TYPES = new Set(["CTPS", "CNIS", "LAUDO_MEDICO", "CARTA_CONCESSAO", "COPIA_PROCESSO", "CAT"]);
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: env.maxFileSizeMb * 1024 * 1024 },
@@ -106,7 +111,7 @@ router.post(
     if (!ALLOWED_MIME.has(mimeType)) {
       throw Errors.invalidFileType();
     }
-    const pdfOnly = item.multiple || item.type === "CNIS";
+    const pdfOnly = PDF_ONLY_TYPES.has(item.type);
     if (pdfOnly && mimeType !== "application/pdf") {
       throw Errors.validation("Este item só aceita arquivos em PDF.");
     }

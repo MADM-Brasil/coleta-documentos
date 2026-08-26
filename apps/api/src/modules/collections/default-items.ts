@@ -25,6 +25,7 @@ export const DEFAULT_ITEMS = [
     title: "Áudio sobre o acidente",
     description: "Grave um áudio contando com suas palavras o que aconteceu.",
     sortOrder: 4,
+    multiple: true,
   },
   {
     type: "VIDEO" as const,
@@ -33,6 +34,7 @@ export const DEFAULT_ITEMS = [
     instructions:
       "Posicione o celular de forma que seja possível visualizar seu movimento. Siga as orientações recebidas durante o atendimento.",
     sortOrder: 5,
+    multiple: true,
   },
   {
     type: "CTPS" as const,

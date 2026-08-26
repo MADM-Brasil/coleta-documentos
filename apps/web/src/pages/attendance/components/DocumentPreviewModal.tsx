@@ -13,10 +13,15 @@ interface DocumentPreviewModalProps {
 // alterna entre um tamanho médio e um tamanho grande, sem sair do modal.
 export function DocumentPreviewModal({ url, mimeType, filename, onClose }: DocumentPreviewModalProps) {
   const [expanded, setExpanded] = useState(false);
-  const isImage = mimeType.startsWith("image/");
-  const isVideo = mimeType.startsWith("video/");
-  const isAudio = mimeType.startsWith("audio/");
-  const isPdf = mimeType === "application/pdf";
+  // Alguns navegadores/uploads (ex: gravação via MediaRecorder) podem salvar o mimeType
+  // com sufixo de codec ("video/webm;codecs=vp8,opus") ou, em casos raros, sem tipo
+  // reconhecível — nesses casos cai pra extensão do próprio nome do arquivo.
+  const type = mimeType.toLowerCase();
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const isImage = type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
+  const isVideo = type.startsWith("video/") || ["webm", "mp4", "mov"].includes(ext);
+  const isAudio = type.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a"].includes(ext);
+  const isPdf = type.includes("pdf") || ext === "pdf";
 
   return (
     <div

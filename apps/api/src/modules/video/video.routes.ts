@@ -7,6 +7,7 @@ import { asyncHandler } from "../../middlewares/error";
 import { requireRoomAccess, requireAgent } from "../../middlewares/session-auth";
 import { Errors } from "../../lib/errors";
 import { generateDescriptiveStorageKey } from "../../lib/token";
+import { transcodeWebmToMp4 } from "../../lib/video-transcode";
 import { storageService } from "../storage";
 import { recordEvent } from "../collections/events.service";
 import { notifyCallback } from "../collections/callback.service";
@@ -163,14 +164,25 @@ router.post(
     });
     if (!item) throw Errors.notFound("Item não encontrado.");
 
-    // O navegador às vezes manda um Content-Type genérico ("text/plain") pra esse
-    // multipart, mesmo o Blob tendo sido criado com o tipo certo — como essa rota só
-    // recebe gravações feitas por nós mesmos (sempre .webm), fixamos o mimeType real
-    // pelo tipo do item em vez de confiar no que veio na requisição.
-    const mimeType = item.type === "VIDEO" ? "video/webm" : "audio/webm";
+    let buffer = file.buffer;
+    let mimeType = item.type === "VIDEO" ? "video/webm" : "audio/webm";
+    let originalFilename = file.originalname;
 
-    const storageKey = generateDescriptiveStorageKey(item.type, null, file.originalname);
-    const uploadResult = await storageService.upload(file.buffer, { key: storageKey, mimeType });
+    // O HubSpot não reconhece WebM como vídeo nos anexos — converte pra MP4
+    // (H.264/AAC), formato universal, antes de salvar. Se a conversão falhar por
+    // qualquer motivo, guarda o WebM original em vez de perder a gravação.
+    if (item.type === "VIDEO") {
+      try {
+        buffer = await transcodeWebmToMp4(file.buffer);
+        mimeType = "video/mp4";
+        originalFilename = originalFilename.replace(/\.webm$/i, ".mp4");
+      } catch (err) {
+        console.error("[agent-upload] falha ao converter vídeo pra mp4, salvando webm original:", err);
+      }
+    }
+
+    const storageKey = generateDescriptiveStorageKey(item.type, null, originalFilename);
+    const uploadResult = await storageService.upload(buffer, { key: storageKey, mimeType });
 
     const media = await prisma.mediaFile.create({
       data: {
@@ -179,8 +191,8 @@ router.post(
         storageKey: uploadResult.key,
         url: env.storageProvider === "CLOUDINARY" ? uploadResult.url : null,
         mimeType,
-        fileSize: file.size,
-        originalFilename: file.originalname,
+        fileSize: buffer.length,
+        originalFilename,
         status: "UPLOADED",
       },
     });

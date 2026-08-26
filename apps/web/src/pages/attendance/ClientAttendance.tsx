@@ -29,9 +29,9 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
   const [finalizing, setFinalizing] = useState(false);
   // Clicar em qualquer um dos dois vídeos troca qual fica grande.
   const [swapped, setSwapped] = useState(false);
-  // Item (tipo áudio) que o consultor está gravando agora — mostra "Áudio em
+  // Item (áudio ou vídeo) que o consultor está gravando agora — mostra um status "em
   // andamento" no lugar dos controles normais de gravação do cliente.
-  const [activeAudioItemId, setActiveAudioItemId] = useState<string | null>(null);
+  const [activeCaptureItemId, setActiveCaptureItemId] = useState<string | null>(null);
 
   useEffect(() => {
     publicApi
@@ -76,15 +76,15 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
       );
     });
 
-    socket.on("audio_capture_start", ({ itemId }: { itemId: string }) => setActiveAudioItemId(itemId));
-    socket.on("audio_capture_cancel", ({ itemId }: { itemId: string }) =>
-      setActiveAudioItemId((current) => (current === itemId ? null : current))
+    socket.on("media_capture_start", ({ itemId }: { itemId: string }) => setActiveCaptureItemId(itemId));
+    socket.on("media_capture_cancel", ({ itemId }: { itemId: string }) =>
+      setActiveCaptureItemId((current) => (current === itemId ? null : current))
     );
 
     // O consultor pode enviar o áudio direto (gravado a partir da própria chamada) —
     // atualiza o item pro cliente ver "Em análise" sem precisar recarregar a página.
     socket.on("document_uploaded", ({ itemId }: { itemId: string }) => {
-      setActiveAudioItemId((current) => (current === itemId ? null : current));
+      setActiveCaptureItemId((current) => (current === itemId ? null : current));
       setData((prev) =>
         prev
           ? { ...prev, items: prev.items.map((i) => (i.id === itemId ? { ...i, status: "UPLOADED" } : i)) }
@@ -310,7 +310,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
                           index={idx}
                           onUploaded={handleUploaded}
                           missing={missing}
-                          audioCaptureActive={activeAudioItemId === item.id}
+                          captureActive={activeCaptureItemId === item.id}
                         />
                       )}
                     </div>

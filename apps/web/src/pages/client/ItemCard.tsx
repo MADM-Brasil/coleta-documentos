@@ -46,10 +46,10 @@ interface ItemCardProps {
   missing?: boolean;
   // true enquanto o consultor está gravando o áudio desse item direto da chamada —
   // esconde os controles de gravação do cliente e mostra só um status.
-  audioCaptureActive?: boolean;
+  captureActive?: boolean;
 }
 
-export function ItemCard({ token, item, index, onUploaded, missing, audioCaptureActive }: ItemCardProps) {
+export function ItemCard({ token, item, index, onUploaded, missing, captureActive }: ItemCardProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -82,13 +82,13 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
   }, []);
 
   useEffect(() => {
-    if (!audioCaptureActive) {
+    if (!captureActive) {
       setCaptureSeconds(0);
       return;
     }
     const interval = setInterval(() => setCaptureSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
-  }, [audioCaptureActive]);
+  }, [captureActive]);
 
   function handleFileSelected(selected: FileList | null) {
     const picked = selected?.[0];
@@ -171,7 +171,7 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
   return (
     <div
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
-        audioCaptureActive
+        captureActive
           ? "border-red-300"
           : approved
           ? "border-emerald-200"
@@ -185,7 +185,7 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
     >
       <button
         type="button"
-        onClick={() => !done && !audioCaptureActive && setOpen((v) => !v)}
+        onClick={() => !done && !captureActive && setOpen((v) => !v)}
         className="flex w-full items-center gap-4 p-4 text-left active:bg-slate-50"
       >
         <div
@@ -208,8 +208,8 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900">{item.title}</p>
           <p className="truncate text-sm text-slate-500">
-            {audioCaptureActive
-              ? "Áudio em andamento"
+            {captureActive
+              ? `${video ? "Vídeo" : "Áudio"} em andamento`
               : approved
               ? "Aprovado"
               : pendingReview
@@ -217,12 +217,12 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
               : item.description}
           </p>
         </div>
-        {audioCaptureActive && (
+        {captureActive && (
           <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700">
             <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-red-600" /> Gravando
           </span>
         )}
-        {!done && !audioCaptureActive && (
+        {!done && !captureActive && (
           <span
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
               item.status === "REJECTED"
@@ -237,15 +237,15 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
         )}
       </button>
 
-      {audioCaptureActive && (
+      {captureActive && (
         <div className="flex flex-col items-center gap-2 border-t border-red-100 bg-red-50/60 py-5">
           <span className="relative flex h-14 w-14 items-center justify-center">
             <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-60" />
             <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
-              <Mic className="h-6 w-6 text-red-600" />
+              {video ? <Video className="h-6 w-6 text-red-600" /> : <Mic className="h-6 w-6 text-red-600" />}
             </span>
           </span>
-          <p className="text-sm font-semibold text-red-700">Áudio em andamento</p>
+          <p className="text-sm font-semibold text-red-700">{video ? "Vídeo" : "Áudio"} em andamento</p>
           <p className="text-xs text-red-500">{formatTime(captureSeconds)}</p>
         </div>
       )}
@@ -257,7 +257,7 @@ export function ItemCard({ token, item, index, onUploaded, missing, audioCapture
         </div>
       )}
 
-      {open && !done && !audioCaptureActive && (
+      {open && !done && !captureActive && (
         <div className="border-t border-slate-100 p-4 animate-fade-in">
           {item.instructions && (
             <div className="mb-4 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">{item.instructions}</div>

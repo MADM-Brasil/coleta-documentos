@@ -15,7 +15,7 @@ import { emitToRoom } from "./realtime";
 
 const router = Router();
 
-const uploadAudio = multer({
+const uploadCapture = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: env.maxFileSizeMb * 1024 * 1024 },
 });
@@ -145,17 +145,18 @@ router.post(
   })
 );
 
-// Consultor grava o áudio do cliente durante a chamada (a partir do track de áudio já
-// recebido via WebRTC) e envia direto — o cliente só vê "Áudio em andamento", sem
-// precisar gravar nada pelo próprio celular.
+// Consultor grava o áudio/vídeo do cliente durante a chamada (a partir dos tracks já
+// recebidos via WebRTC) e envia direto — o cliente só vê um status "em andamento",
+// sem precisar gravar nada pelo próprio celular (evita ter que abrir a câmera do
+// sistema, que substituiria a câmera da própria chamada).
 router.post(
-  "/:collectionId/items/:itemId/audio-upload",
+  "/:collectionId/items/:itemId/agent-upload",
   requireRoomAccess,
   requireAgent,
-  uploadAudio.single("file"),
+  uploadCapture.single("file"),
   asyncHandler(async (req, res) => {
     const file = req.file;
-    if (!file) throw Errors.validation("Nenhum áudio recebido.");
+    if (!file) throw Errors.validation("Nenhum arquivo recebido.");
 
     const item = await prisma.collectionItem.findFirst({
       where: { id: req.params.itemId, collectionRequestId: req.sessionCollectionId },

@@ -38,11 +38,12 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   const pipVideoRef = useRef<HTMLVideoElement>(null);
   const pipRafRef = useRef<number | null>(null);
 
-  // Gravação do áudio do cliente (item tipo AUDIO), feita a partir do próprio track
-  // de áudio já recebido na chamada — o cliente não precisa gravar nada no celular.
+  // Gravação do áudio/vídeo do cliente (itens tipo AUDIO ou VIDEO), feita a partir dos
+  // próprios tracks já recebidos na chamada — o cliente não precisa gravar nada no
+  // celular (e não perde a câmera da chamada abrindo o app de câmera do sistema).
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
   const roomSocketRef = useRef<Socket | null>(null);
 
   const loadCollection = useCallback(() => {
@@ -72,49 +73,58 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
     };
   }, [collectionId, loadCollection]);
 
-  function startAudioCapture(itemId: string) {
-    const stream = session.remoteAudioRef.current?.srcObject as MediaStream | null;
+  function startCapture(itemId: string, kind: "AUDIO" | "VIDEO") {
+    const stream =
+      kind === "VIDEO" ? session.getRemoteCameraStream() : (session.remoteAudioRef.current?.srcObject as MediaStream | null);
     if (!stream) {
-      setPipError("O áudio do cliente ainda não está disponível — confirme que a chamada está ativa.");
+      setPipError(
+        kind === "VIDEO"
+          ? "O vídeo do cliente ainda não está disponível — confirme que a câmera dele está ligada."
+          : "O áudio do cliente ainda não está disponível — confirme que a chamada está ativa."
+      );
       return;
     }
     const recorder = new MediaRecorder(stream);
-    audioChunksRef.current = [];
+    mediaChunksRef.current = [];
     recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      if (e.data.size > 0) mediaChunksRef.current.push(e.data);
     };
     recorder.start();
-    audioRecorderRef.current = recorder;
+    mediaRecorderRef.current = recorder;
     setRecordingItemId(itemId);
-    roomSocketRef.current?.emit("audio_capture_start", { itemId });
+    roomSocketRef.current?.emit("media_capture_start", { itemId });
   }
 
-  function cancelAudioCapture(itemId: string) {
-    audioRecorderRef.current?.stop();
-    audioRecorderRef.current = null;
-    audioChunksRef.current = [];
+  function cancelCapture(itemId: string) {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    mediaChunksRef.current = [];
     setRecordingItemId(null);
-    roomSocketRef.current?.emit("audio_capture_cancel", { itemId });
+    roomSocketRef.current?.emit("media_capture_cancel", { itemId });
   }
 
-  function stopAndUploadAudio(itemId: string) {
-    const recorder = audioRecorderRef.current;
+  function stopAndUploadCapture(itemId: string, kind: "AUDIO" | "VIDEO") {
+    const recorder = mediaRecorderRef.current;
     if (!recorder) return;
     recorder.onstop = async () => {
       try {
-        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const ext = kind === "VIDEO" ? "webm" : "webm";
+        const blob = new Blob(mediaChunksRef.current, { type: recorder.mimeType || `${kind === "VIDEO" ? "video" : "audio"}/webm` });
         const formData = new FormData();
-        formData.append("file", new File([blob], `audio-${Date.now()}.webm`, { type: blob.type }));
-        await videoApi.post(`/${collectionId}/items/${itemId}/audio-upload`, formData, {
+        formData.append(
+          "file",
+          new File([blob], `${kind === "VIDEO" ? "video" : "audio"}-${Date.now()}.${ext}`, { type: blob.type })
+        );
+        await videoApi.post(`/${collectionId}/items/${itemId}/agent-upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         loadCollection();
       } catch {
-        setPipError("Não foi possível enviar o áudio gravado. Tente novamente.");
+        setPipError("Não foi possível enviar a gravação. Tente novamente.");
       } finally {
-        audioRecorderRef.current = null;
+        mediaRecorderRef.current = null;
         setRecordingItemId(null);
-        roomSocketRef.current?.emit("audio_capture_cancel", { itemId });
+        roomSocketRef.current?.emit("media_capture_cancel", { itemId });
       }
     };
     recorder.stop();
@@ -381,9 +391,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             finalizing={finalizing}
             onShare={handleShare}
             recordingItemId={recordingItemId}
-            onStartAudioCapture={startAudioCapture}
-            onCancelAudioCapture={cancelAudioCapture}
-            onStopAudioCapture={stopAndUploadAudio}
+            onStartCapture={startCapture}
+            onCancelCapture={cancelCapture}
+            onStopCapture={stopAndUploadCapture}
           />
         )}
       </div>

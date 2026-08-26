@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Clock, Eye, Mic, RotateCcw, ShieldAlert, Loader2, Square, X } from "lucide-react";
+import { Check, Clock, Eye, Mic, RotateCcw, ShieldAlert, Loader2, Square, Video, X } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import type { AgentItem } from "../types";
@@ -24,20 +24,20 @@ interface DocumentCardProps {
   item: AgentItem;
   onApprove: (itemId: string) => Promise<void>;
   onReject: (itemId: string, reason: string) => Promise<void>;
-  isRecordingAudio?: boolean;
-  onStartAudioCapture?: () => void;
-  onCancelAudioCapture?: () => void;
-  onStopAudioCapture?: () => void;
+  isRecordingCapture?: boolean;
+  onStartCapture?: () => void;
+  onCancelCapture?: () => void;
+  onStopCapture?: () => void;
 }
 
 export function DocumentCard({
   item,
   onApprove,
   onReject,
-  isRecordingAudio,
-  onStartAudioCapture,
-  onCancelAudioCapture,
-  onStopAudioCapture,
+  isRecordingCapture,
+  onStartCapture,
+  onCancelCapture,
+  onStopCapture,
 }: DocumentCardProps) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -47,18 +47,21 @@ export function DocumentCard({
   const media = item.media[item.media.length - 1];
   const canReview = item.status === "UPLOADED";
   const mediaUrl = media ? media.url ?? `${apiBaseUrl}/webhook/media/${media.id}` : null;
-  const canRecordAudio =
-    item.type === "AUDIO" && (item.status === "PENDING" || item.status === "REJECTED") && onStartAudioCapture;
+  const isVideoItem = item.type === "VIDEO";
+  const canRecordCapture =
+    (item.type === "AUDIO" || item.type === "VIDEO") &&
+    (item.status === "PENDING" || item.status === "REJECTED") &&
+    onStartCapture;
 
   const [recordSeconds, setRecordSeconds] = useState(0);
   useEffect(() => {
-    if (!isRecordingAudio) {
+    if (!isRecordingCapture) {
       setRecordSeconds(0);
       return;
     }
     const interval = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
-  }, [isRecordingAudio]);
+  }, [isRecordingCapture]);
 
   function formatTime(seconds: number) {
     const m = Math.floor(seconds / 60);
@@ -123,19 +126,19 @@ export function DocumentCard({
         />
       )}
 
-      {isRecordingAudio && (
+      {isRecordingCapture && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
           <span className="flex items-center gap-2 text-sm font-medium text-red-700">
             <span className="relative flex h-3 w-3 items-center justify-center">
               <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-75" />
               <span className="relative h-2 w-2 rounded-full bg-red-600" />
             </span>
-            Gravando o áudio do cliente... {formatTime(recordSeconds)}
+            Gravando o {isVideoItem ? "vídeo" : "áudio"} do cliente... {formatTime(recordSeconds)}
           </span>
           <div className="flex gap-1.5">
             <button
               type="button"
-              onClick={onCancelAudioCapture}
+              onClick={onCancelCapture}
               aria-label="Cancelar gravação"
               title="Cancelar"
               className="flex h-7 w-7 items-center justify-center rounded-md text-red-500 hover:bg-red-100"
@@ -144,7 +147,7 @@ export function DocumentCard({
             </button>
             <button
               type="button"
-              onClick={onStopAudioCapture}
+              onClick={onStopCapture}
               aria-label="Parar e enviar"
               title="Parar e enviar"
               className="flex h-7 w-7 items-center justify-center rounded-md bg-red-600 text-white hover:bg-red-700"
@@ -155,9 +158,10 @@ export function DocumentCard({
         </div>
       )}
 
-      {!isRecordingAudio && canRecordAudio && (
-        <Button size="sm" variant="outline" className="mt-3 w-full" onClick={onStartAudioCapture}>
-          <Mic className="h-3.5 w-3.5" /> Gravar áudio do cliente
+      {!isRecordingCapture && canRecordCapture && (
+        <Button size="sm" variant="outline" className="mt-3 w-full" onClick={onStartCapture}>
+          {isVideoItem ? <Video className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+          Gravar {isVideoItem ? "vídeo" : "áudio"} do cliente
         </Button>
       )}
 

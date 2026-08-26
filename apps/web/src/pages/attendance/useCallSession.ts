@@ -244,6 +244,16 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     }
   }
 
+  // Combina o track de câmera do OUTRO participante (não a tela compartilhada, mesmo
+  // que ela esteja em exibição no momento) com o áudio dele — usado pelo consultor pra
+  // gravar o "vídeo da limitação" direto da chamada, sem depender do cliente gravar.
+  function getRemoteCameraStream(): MediaStream | null {
+    const camTrack = remoteCameraTrackRef.current;
+    if (!camTrack) return null;
+    const audioStream = remoteAudioRef.current?.srcObject as MediaStream | null;
+    return new MediaStream([camTrack.mediaStreamTrack, ...(audioStream?.getAudioTracks() ?? [])]);
+  }
+
   return {
     callState,
     peerConnected,
@@ -266,5 +276,6 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
     toggleMic,
     toggleCam,
     toggleScreenShare,
+    getRemoteCameraStream,
   };
 }

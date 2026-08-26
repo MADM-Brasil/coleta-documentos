@@ -12,9 +12,9 @@ interface DocumentPanelProps {
   finalizing: boolean;
   onShare?: () => void;
   recordingItemId?: string | null;
-  onStartAudioCapture?: (itemId: string) => void;
-  onCancelAudioCapture?: (itemId: string) => void;
-  onStopAudioCapture?: (itemId: string) => void;
+  onStartCapture?: (itemId: string, kind: "AUDIO" | "VIDEO") => void;
+  onCancelCapture?: (itemId: string) => void;
+  onStopCapture?: (itemId: string, kind: "AUDIO" | "VIDEO") => void;
 }
 
 export function DocumentPanel({
@@ -25,9 +25,9 @@ export function DocumentPanel({
   finalizing,
   onShare,
   recordingItemId,
-  onStartAudioCapture,
-  onCancelAudioCapture,
-  onStopAudioCapture,
+  onStartCapture,
+  onCancelCapture,
+  onStopCapture,
 }: DocumentPanelProps) {
   const approved = collection.items.filter((i) => i.status === "APPROVED").length;
   const total = collection.items.length;
@@ -57,18 +57,21 @@ export function DocumentPanel({
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
-        {collection.items.map((item) => (
-          <DocumentCard
-            key={item.id}
-            item={item}
-            onApprove={onApprove}
-            onReject={onReject}
-            isRecordingAudio={recordingItemId === item.id}
-            onStartAudioCapture={onStartAudioCapture ? () => onStartAudioCapture(item.id) : undefined}
-            onCancelAudioCapture={onCancelAudioCapture ? () => onCancelAudioCapture(item.id) : undefined}
-            onStopAudioCapture={onStopAudioCapture ? () => onStopAudioCapture(item.id) : undefined}
-          />
-        ))}
+        {collection.items.map((item) => {
+          const kind = item.type === "VIDEO" ? "VIDEO" : "AUDIO";
+          return (
+            <DocumentCard
+              key={item.id}
+              item={item}
+              onApprove={onApprove}
+              onReject={onReject}
+              isRecordingCapture={recordingItemId === item.id}
+              onStartCapture={onStartCapture ? () => onStartCapture(item.id, kind) : undefined}
+              onCancelCapture={onCancelCapture ? () => onCancelCapture(item.id) : undefined}
+              onStopCapture={onStopCapture ? () => onStopCapture(item.id, kind) : undefined}
+            />
+          );
+        })}
       </div>
 
       <div className="border-t border-slate-100 p-4">

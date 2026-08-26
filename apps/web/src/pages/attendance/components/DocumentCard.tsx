@@ -54,7 +54,9 @@ export function DocumentCard({
   const isVideoItem = item.type === "VIDEO";
   const canRecordCapture =
     (item.type === "AUDIO" || item.type === "VIDEO") &&
-    (item.status === "PENDING" || item.status === "REJECTED") &&
+    // Itens "multiple" continuam permitindo gravar de novo mesmo já com um arquivo
+    // em análise/aprovado — o consultor pode registrar mais de um vídeo/áudio.
+    (item.status === "PENDING" || item.status === "REJECTED" || item.multiple) &&
     !isUploadingCapture &&
     onStartCapture;
 

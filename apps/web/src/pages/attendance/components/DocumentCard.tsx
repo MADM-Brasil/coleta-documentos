@@ -47,6 +47,9 @@ export function DocumentCard({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // O botão de gravar fica escondido até o consultor clicar no card — evita poluir
+  // a lista com um botão de gravação por item o tempo todo.
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   const media = item.media[item.media.length - 1];
   const canReview = item.status === "UPLOADED";
@@ -98,9 +101,17 @@ export function DocumentCard({
     }
   }
 
+  // Enquanto está gravando/enviando, o painel fica sempre visível mesmo que o
+  // consultor não tenha clicado no card (ou tenha clicado de novo sem querer).
+  const captureVisible = captureOpen || isRecordingCapture || isUploadingCapture;
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-soft">
-      <div className="flex items-start justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => canRecordCapture && setCaptureOpen((v) => !v)}
+        className={`flex w-full items-start justify-between gap-3 text-left ${canRecordCapture ? "cursor-pointer" : "cursor-default"}`}
+      >
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-900">{item.title}</p>
           {item.status === "REJECTED" && item.rejectionReason && (
@@ -113,7 +124,7 @@ export function DocumentCard({
           {item.status === "REJECTED" && <ShieldAlert className="h-3 w-3" />}
           {STATUS_LABEL[item.status]}
         </span>
-      </div>
+      </button>
 
       {media && mediaUrl && (
         <button
@@ -134,7 +145,7 @@ export function DocumentCard({
         />
       )}
 
-      {isCountingDown && (
+      {captureVisible && isCountingDown && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
           <span className="text-sm font-medium text-red-700">
             Começando em {captureCountdown}... (veja o vídeo da chamada)
@@ -151,7 +162,7 @@ export function DocumentCard({
         </div>
       )}
 
-      {isRecordingCapture && !isCountingDown && (
+      {captureVisible && isRecordingCapture && !isCountingDown && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
           <span className="flex items-center gap-2 text-sm font-medium text-red-700">
             <span className="relative flex h-3 w-3 items-center justify-center">
@@ -183,7 +194,7 @@ export function DocumentCard({
         </div>
       )}
 
-      {isUploadingCapture && (
+      {captureVisible && isUploadingCapture && (
         <div className="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-600" />
           <span className="text-sm font-medium text-brand-700">
@@ -192,7 +203,7 @@ export function DocumentCard({
         </div>
       )}
 
-      {!isRecordingCapture && canRecordCapture && (
+      {captureVisible && !isRecordingCapture && canRecordCapture && (
         <Button size="sm" variant="outline" className="mt-3 w-full" onClick={onStartCapture}>
           {isVideoItem ? <Video className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
           Gravar {isVideoItem ? "vídeo" : "áudio"} do cliente

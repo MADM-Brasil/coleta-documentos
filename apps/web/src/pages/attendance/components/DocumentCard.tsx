@@ -25,6 +25,7 @@ interface DocumentCardProps {
   onApprove: (itemId: string) => Promise<void>;
   onReject: (itemId: string, reason: string) => Promise<void>;
   isRecordingCapture?: boolean;
+  isUploadingCapture?: boolean;
   captureCountdown?: number | null;
   onStartCapture?: () => void;
   onCancelCapture?: () => void;
@@ -36,6 +37,7 @@ export function DocumentCard({
   onApprove,
   onReject,
   isRecordingCapture,
+  isUploadingCapture,
   captureCountdown,
   onStartCapture,
   onCancelCapture,
@@ -53,6 +55,7 @@ export function DocumentCard({
   const canRecordCapture =
     (item.type === "AUDIO" || item.type === "VIDEO") &&
     (item.status === "PENDING" || item.status === "REJECTED") &&
+    !isUploadingCapture &&
     onStartCapture;
 
   const isCountingDown = isRecordingCapture && !!captureCountdown;
@@ -175,6 +178,15 @@ export function DocumentCard({
               <Square className="h-3.5 w-3.5" />
             </button>
           </div>
+        </div>
+      )}
+
+      {isUploadingCapture && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-600" />
+          <span className="text-sm font-medium text-brand-700">
+            Enviando {isVideoItem ? "vídeo" : "áudio"}... {isVideoItem ? "(convertendo, pode levar alguns segundos)" : ""}
+          </span>
         </div>
       )}
 

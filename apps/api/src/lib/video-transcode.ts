@@ -21,7 +21,7 @@ export async function transcodeWebmToMp4(buffer: Buffer): Promise<Buffer> {
   try {
     await new Promise<void>((resolve, reject) => {
       ffmpeg(inputPath)
-        .outputOptions(["-c:v libx264", "-preset veryfast", "-c:a aac", "-movflags +faststart"])
+        .outputOptions(["-c:v libx264", "-preset ultrafast", "-crf 26", "-c:a aac", "-movflags +faststart"])
         .toFormat("mp4")
         .on("end", () => resolve())
         .on("error", reject)

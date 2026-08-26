@@ -42,6 +42,9 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   // próprios tracks já recebidos na chamada — o cliente não precisa gravar nada no
   // celular (e não perde a câmera da chamada abrindo o app de câmera do sistema).
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
+  // Enquanto o vídeo é convertido pra MP4 no servidor (pode demorar alguns segundos),
+  // mostra "Enviando..." em vez de deixar o timer de gravação rodando pra sempre.
+  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
   // Contagem regressiva de 3s antes da gravação de fato começar — dá tempo do cliente
   // se posicionar. null = não está em contagem (já gravando ou parado).
   const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
@@ -129,6 +132,11 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   function stopAndUploadCapture(itemId: string, kind: "AUDIO" | "VIDEO") {
     const recorder = mediaRecorderRef.current;
     if (!recorder) return;
+    // Feedback imediato: some com o timer de gravação assim que clica em parar, mesmo
+    // que o envio (e a conversão pra MP4 no servidor, que pode levar alguns segundos)
+    // ainda esteja rolando em segundo plano.
+    setRecordingItemId(null);
+    setUploadingItemId(itemId);
     recorder.onstop = async () => {
       try {
         const ext = kind === "VIDEO" ? "webm" : "webm";
@@ -146,7 +154,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
         setPipError("Não foi possível enviar a gravação. Tente novamente.");
       } finally {
         mediaRecorderRef.current = null;
-        setRecordingItemId(null);
+        setUploadingItemId(null);
         roomSocketRef.current?.emit("media_capture_cancel", { itemId });
       }
     };
@@ -421,6 +429,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             finalizing={finalizing}
             onShare={handleShare}
             recordingItemId={recordingItemId}
+            uploadingItemId={uploadingItemId}
             captureCountdown={captureCountdown}
             onStartCapture={startCapture}
             onCancelCapture={cancelCapture}

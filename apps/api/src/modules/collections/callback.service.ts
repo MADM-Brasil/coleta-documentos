@@ -10,7 +10,7 @@ export interface CallbackPayload {
   tipo: string;
   // Número quando o externalId é numérico (ex: ID de lead da Kommo) — APIs de CRM
   // costumam validar o tipo do campo, e mandar como texto ("123") pode ser rejeitado.
-  leadId: string | number | null;
+  objectId: string | number | null;
   link: string;
   // Public ID exato no Cloudinary (ex: "forms-madm/RG_19151475_123") — usar no
   // módulo "Get a Resource" do Cloudinary no Make, junto com resourceType.
@@ -53,9 +53,9 @@ export async function notifyCallback(
   if (!collection?.callbackUrl) return;
 
   const externalId = collection.client.externalId;
-  const leadId = externalId && /^\d+$/.test(externalId) ? Number(externalId) : externalId;
+  const objectId = externalId && /^\d+$/.test(externalId) ? Number(externalId) : externalId;
 
-  const payload: CallbackPayload = { tipo, leadId, link };
+  const payload: CallbackPayload = { tipo, objectId, link };
 
   if (fileInfo) {
     if (fileInfo.publicId) {

@@ -163,8 +163,14 @@ router.post(
     });
     if (!item) throw Errors.notFound("Item não encontrado.");
 
+    // O navegador às vezes manda um Content-Type genérico ("text/plain") pra esse
+    // multipart, mesmo o Blob tendo sido criado com o tipo certo — como essa rota só
+    // recebe gravações feitas por nós mesmos (sempre .webm), fixamos o mimeType real
+    // pelo tipo do item em vez de confiar no que veio na requisição.
+    const mimeType = item.type === "VIDEO" ? "video/webm" : "audio/webm";
+
     const storageKey = generateDescriptiveStorageKey(item.type, null, file.originalname);
-    const uploadResult = await storageService.upload(file.buffer, { key: storageKey, mimeType: file.mimetype });
+    const uploadResult = await storageService.upload(file.buffer, { key: storageKey, mimeType });
 
     const media = await prisma.mediaFile.create({
       data: {
@@ -172,7 +178,7 @@ router.post(
         storageProvider: env.storageProvider,
         storageKey: uploadResult.key,
         url: env.storageProvider === "CLOUDINARY" ? uploadResult.url : null,
-        mimeType: file.mimetype,
+        mimeType,
         fileSize: file.size,
         originalFilename: file.originalname,
         status: "UPLOADED",

@@ -12,6 +12,7 @@ interface DocumentPanelProps {
   finalizing: boolean;
   onShare?: () => void;
   recordingItemId?: string | null;
+  captureCountdown?: number | null;
   onStartCapture?: (itemId: string, kind: "AUDIO" | "VIDEO") => void;
   onCancelCapture?: (itemId: string) => void;
   onStopCapture?: (itemId: string, kind: "AUDIO" | "VIDEO") => void;
@@ -25,6 +26,7 @@ export function DocumentPanel({
   finalizing,
   onShare,
   recordingItemId,
+  captureCountdown,
   onStartCapture,
   onCancelCapture,
   onStopCapture,
@@ -66,6 +68,7 @@ export function DocumentPanel({
               onApprove={onApprove}
               onReject={onReject}
               isRecordingCapture={recordingItemId === item.id}
+              captureCountdown={recordingItemId === item.id ? captureCountdown ?? null : null}
               onStartCapture={onStartCapture ? () => onStartCapture(item.id, kind) : undefined}
               onCancelCapture={onCancelCapture ? () => onCancelCapture(item.id) : undefined}
               onStopCapture={onStopCapture ? () => onStopCapture(item.id, kind) : undefined}

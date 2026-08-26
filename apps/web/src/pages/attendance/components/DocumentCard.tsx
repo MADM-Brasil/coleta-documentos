@@ -25,6 +25,7 @@ interface DocumentCardProps {
   onApprove: (itemId: string) => Promise<void>;
   onReject: (itemId: string, reason: string) => Promise<void>;
   isRecordingCapture?: boolean;
+  captureCountdown?: number | null;
   onStartCapture?: () => void;
   onCancelCapture?: () => void;
   onStopCapture?: () => void;
@@ -35,6 +36,7 @@ export function DocumentCard({
   onApprove,
   onReject,
   isRecordingCapture,
+  captureCountdown,
   onStartCapture,
   onCancelCapture,
   onStopCapture,
@@ -53,15 +55,16 @@ export function DocumentCard({
     (item.status === "PENDING" || item.status === "REJECTED") &&
     onStartCapture;
 
+  const isCountingDown = isRecordingCapture && !!captureCountdown;
   const [recordSeconds, setRecordSeconds] = useState(0);
   useEffect(() => {
-    if (!isRecordingCapture) {
+    if (!isRecordingCapture || isCountingDown) {
       setRecordSeconds(0);
       return;
     }
     const interval = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
-  }, [isRecordingCapture]);
+  }, [isRecordingCapture, isCountingDown]);
 
   function formatTime(seconds: number) {
     const m = Math.floor(seconds / 60);
@@ -126,7 +129,21 @@ export function DocumentCard({
         />
       )}
 
-      {isRecordingCapture && (
+      {isCountingDown && (
+        <div className="mt-3 flex flex-col items-center gap-1.5 rounded-lg bg-red-50 px-3 py-4">
+          <span className="text-2xl font-bold text-red-600">{captureCountdown}</span>
+          <span className="text-xs font-medium text-red-500">Prepare o cliente — a gravação já vai começar</span>
+          <button
+            type="button"
+            onClick={onCancelCapture}
+            className="mt-1 text-xs font-medium text-red-500 underline hover:text-red-700"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {isRecordingCapture && !isCountingDown && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
           <span className="flex items-center gap-2 text-sm font-medium text-red-700">
             <span className="relative flex h-3 w-3 items-center justify-center">

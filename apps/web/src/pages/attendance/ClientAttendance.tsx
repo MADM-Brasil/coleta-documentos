@@ -311,6 +311,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
                           onUploaded={handleUploaded}
                           missing={missing}
                           captureActive={activeCaptureItemId === item.id}
+                          getSelfStream={() => session.localVideoRef.current?.srcObject as MediaStream | null}
                         />
                       )}
                     </div>

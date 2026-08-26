@@ -42,8 +42,12 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
   // próprios tracks já recebidos na chamada — o cliente não precisa gravar nada no
   // celular (e não perde a câmera da chamada abrindo o app de câmera do sistema).
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
+  // Contagem regressiva de 3s antes da gravação de fato começar — dá tempo do cliente
+  // se posicionar. null = não está em contagem (já gravando ou parado).
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const roomSocketRef = useRef<Socket | null>(null);
 
   const loadCollection = useCallback(() => {
@@ -84,18 +88,37 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
       );
       return;
     }
-    const recorder = new MediaRecorder(stream);
-    mediaChunksRef.current = [];
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) mediaChunksRef.current.push(e.data);
-    };
-    recorder.start();
-    mediaRecorderRef.current = recorder;
     setRecordingItemId(itemId);
     roomSocketRef.current?.emit("media_capture_start", { itemId });
+
+    // 3, 2, 1... só depois disso o MediaRecorder realmente começa — dá tempo do
+    // cliente se posicionar pro movimento pedido.
+    let secondsLeft = 3;
+    setCaptureCountdown(secondsLeft);
+    countdownIntervalRef.current = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+        setCaptureCountdown(null);
+
+        const recorder = new MediaRecorder(stream);
+        mediaChunksRef.current = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) mediaChunksRef.current.push(e.data);
+        };
+        recorder.start();
+        mediaRecorderRef.current = recorder;
+      } else {
+        setCaptureCountdown(secondsLeft);
+      }
+    }, 1000);
   }
 
   function cancelCapture(itemId: string) {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    countdownIntervalRef.current = null;
+    setCaptureCountdown(null);
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;
     mediaChunksRef.current = [];
@@ -391,6 +414,7 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
             finalizing={finalizing}
             onShare={handleShare}
             recordingItemId={recordingItemId}
+            captureCountdown={captureCountdown}
             onStartCapture={startCapture}
             onCancelCapture={cancelCapture}
             onStopCapture={stopAndUploadCapture}

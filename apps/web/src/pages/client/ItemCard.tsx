@@ -44,12 +44,15 @@ interface ItemCardProps {
   index: number;
   onUploaded: (itemId: string, collectionStatus: string) => void;
   missing?: boolean;
-  // true enquanto o consultor está gravando o áudio desse item direto da chamada —
+  // true enquanto o consultor está gravando o áudio/vídeo desse item direto da chamada —
   // esconde os controles de gravação do cliente e mostra só um status.
   captureActive?: boolean;
+  // Só usado no item de vídeo: devolve o stream da própria câmera (já em uso na
+  // chamada) pra mostrar um espelho na tela, o cliente vendo o próprio ângulo.
+  getSelfStream?: () => MediaStream | null;
 }
 
-export function ItemCard({ token, item, index, onUploaded, missing, captureActive }: ItemCardProps) {
+export function ItemCard({ token, item, index, onUploaded, missing, captureActive, getSelfStream }: ItemCardProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -60,12 +63,16 @@ export function ItemCard({ token, item, index, onUploaded, missing, captureActiv
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [inPageCameraOpen, setInPageCameraOpen] = useState(false);
   const [captureSeconds, setCaptureSeconds] = useState(0);
+  // Contagem regressiva local (3,2,1) só decorativa/aproximada — o consultor faz a
+  // mesma contagem do lado dele antes de começar a gravação de verdade.
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const selfPreviewRef = useRef<HTMLVideoElement>(null);
 
   const Icon = ICONS[item.type];
   const approved = item.status === "APPROVED";
@@ -84,11 +91,39 @@ export function ItemCard({ token, item, index, onUploaded, missing, captureActiv
   useEffect(() => {
     if (!captureActive) {
       setCaptureSeconds(0);
+      setCaptureCountdown(null);
+      return;
+    }
+    let secondsLeft = 3;
+    setCaptureCountdown(secondsLeft);
+    const countdown = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        clearInterval(countdown);
+        setCaptureCountdown(null);
+      } else {
+        setCaptureCountdown(secondsLeft);
+      }
+    }, 1000);
+    return () => clearInterval(countdown);
+  }, [captureActive]);
+
+  useEffect(() => {
+    if (!captureActive || captureCountdown !== null) {
+      setCaptureSeconds(0);
       return;
     }
     const interval = setInterval(() => setCaptureSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
-  }, [captureActive]);
+  }, [captureActive, captureCountdown]);
+
+  // Espelha a própria câmera (já em uso na chamada) durante a gravação do vídeo, pro
+  // cliente ver o próprio ângulo em vez de ficar sem retorno visual nenhum.
+  useEffect(() => {
+    if (!captureActive || captureCountdown !== null || !getSelfStream || !selfPreviewRef.current) return;
+    const stream = getSelfStream();
+    if (stream) selfPreviewRef.current.srcObject = stream;
+  }, [captureActive, captureCountdown, getSelfStream]);
 
   function handleFileSelected(selected: FileList | null) {
     const picked = selected?.[0];
@@ -237,14 +272,30 @@ export function ItemCard({ token, item, index, onUploaded, missing, captureActiv
         )}
       </button>
 
-      {captureActive && (
+      {captureActive && captureCountdown !== null && (
+        <div className="flex flex-col items-center gap-1.5 border-t border-red-100 bg-red-50/60 py-6">
+          <span className="text-3xl font-bold text-red-600">{captureCountdown}</span>
+          <p className="text-sm font-medium text-red-700">Prepare-se, a gravação já vai começar...</p>
+        </div>
+      )}
+
+      {captureActive && captureCountdown === null && (
         <div className="flex flex-col items-center gap-2 border-t border-red-100 bg-red-50/60 py-5">
-          <span className="relative flex h-14 w-14 items-center justify-center">
-            <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-60" />
-            <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
-              {video ? <Video className="h-6 w-6 text-red-600" /> : <Mic className="h-6 w-6 text-red-600" />}
+          {video ? (
+            <div className="relative h-40 w-full max-w-[220px] overflow-hidden rounded-xl bg-slate-900">
+              <video ref={selfPreviewRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+              <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white">
+                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-red-500" /> REC
+              </span>
+            </div>
+          ) : (
+            <span className="relative flex h-14 w-14 items-center justify-center">
+              <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-60" />
+              <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+                <Mic className="h-6 w-6 text-red-600" />
+              </span>
             </span>
-          </span>
+          )}
           <p className="text-sm font-semibold text-red-700">{video ? "Vídeo" : "Áudio"} em andamento</p>
           <p className="text-xs text-red-500">{formatTime(captureSeconds)}</p>
         </div>

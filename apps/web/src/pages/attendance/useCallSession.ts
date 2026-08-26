@@ -160,6 +160,10 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
         if (pub.kind === Track.Kind.Audio && participant.sid !== room.localParticipant.sid) setRemoteMicMuted(false);
       });
       room.on(RoomEvent.Disconnected, () => {
+        // Limpa a referência mesmo quando quem desconectou foi o servidor/rede (não
+        // o botão "Encerrar") — sem isso, o guard de connectLiveKit() achava que
+        // ainda havia uma sala conectada e bloqueava aceitar uma chamada nova depois.
+        roomRef.current = null;
         remoteCameraTrackRef.current = null;
         remoteScreenTrackRef.current = null;
         setRemoteVideoActive(false);

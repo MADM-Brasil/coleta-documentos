@@ -182,6 +182,15 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
           <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> {session.mediaError}
         </div>
       )}
+
+      {session.callState === "ended" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-slate-900 text-center">
+          <p className="text-sm font-medium text-white">Chamada encerrada</p>
+          <p className="max-w-[220px] text-xs text-slate-400">
+            Você pode continuar enviando seus documentos normalmente.
+          </p>
+        </div>
+      )}
     </div>
   );
 

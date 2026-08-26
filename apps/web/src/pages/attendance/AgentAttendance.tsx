@@ -287,6 +287,15 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
               <ShieldAlert className="h-4 w-4 shrink-0" /> {session.mediaError || pipError}
             </div>
           )}
+
+          {session.callState === "ended" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-slate-900 text-center">
+              <p className="text-sm font-medium text-white">Chamada encerrada</p>
+              <p className="max-w-[240px] text-xs text-slate-400">
+                A conexão de vídeo foi encerrada — o cliente continua com a documentação aberta.
+              </p>
+            </div>
+          )}
         </div>
 
         {session.callState === "active" && (

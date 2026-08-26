@@ -9,6 +9,7 @@ import { Errors } from "../../lib/errors";
 import { generateDescriptiveStorageKey } from "../../lib/token";
 import { transcodeWebmToMp4 } from "../../lib/video-transcode";
 import { storageService } from "../storage";
+import { readLocalFile } from "../storage/local-storage.service";
 import { recordEvent } from "../collections/events.service";
 import { notifyCallback } from "../collections/callback.service";
 import { createLiveKitToken, isLiveKitConfigured, roomNameFor } from "./livekit.service";
@@ -117,7 +118,22 @@ router.post(
     const media = item.mediaFiles.filter((m) => m.status === "UPLOADED").at(-1);
     if (media) {
       const downloadUrl = media.url ?? `${env.appUrl}/webhook/media/${media.id}`;
-      void notifyCallback(req.sessionCollectionId!, item.type, downloadUrl);
+      // Manda mimeType/nomeArquivo sempre (pro Make nomear o arquivo certo no HubSpot),
+      // e embute o próprio arquivo em base64 quando ele for pequeno o bastante (fotos) —
+      // vídeo/áudio ficam só no link, buscado via HTTP pelo Make.
+      const fileInfo = { mimeType: media.mimeType, filename: media.originalFilename } as {
+        mimeType: string;
+        filename: string;
+        buffer?: Buffer;
+      };
+      if (media.storageProvider === "LOCAL" && media.fileSize <= 10 * 1024 * 1024) {
+        try {
+          fileInfo.buffer = await readLocalFile(media.storageKey);
+        } catch (err) {
+          console.error("[approve] falha ao ler arquivo local pra embutir no callback:", err);
+        }
+      }
+      void notifyCallback(req.sessionCollectionId!, item.type, downloadUrl, fileInfo);
     }
 
     res.json({ item: updated });

@@ -25,7 +25,9 @@ export interface CallbackPayload {
 }
 
 interface FileInfo {
-  buffer: Buffer;
+  // Ausente pra arquivos grandes (ex: vídeo) — nesse caso o Make busca pelo "link"
+  // via HTTP, mas ainda manda mimeType/nomeArquivo pra ele nomear o arquivo direito.
+  buffer?: Buffer;
   mimeType: string;
   filename: string;
   publicId?: string;
@@ -62,10 +64,12 @@ export async function notifyCallback(
       payload.publicId = fileInfo.publicId;
       payload.resourceType = resourceTypeFor(fileInfo.mimeType);
     }
-    if (fileInfo.buffer.length <= MAX_EMBED_BYTES) {
+    // mimeType/nomeArquivo sempre vão junto (mesmo sem o arquivo embutido) — é o
+    // que o Make usa pra nomear o arquivo certo (com extensão) ao baixar pelo "link".
+    payload.mimeType = fileInfo.mimeType;
+    payload.nomeArquivo = fileInfo.filename;
+    if (fileInfo.buffer && fileInfo.buffer.length <= MAX_EMBED_BYTES) {
       payload.arquivoBase64 = fileInfo.buffer.toString("base64");
-      payload.mimeType = fileInfo.mimeType;
-      payload.nomeArquivo = fileInfo.filename;
     }
   }
 

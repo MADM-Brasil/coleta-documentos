@@ -120,13 +120,14 @@ export function useCallSession({ collectionId, token, role }: UseCallSessionPara
         const { data } = await videoApi.post(`/${collectionId}/token`, token ? { token } : {});
         livekitCredsRef.current = { url: data.livekitUrl, jwt: data.livekitToken };
       }
-      // adaptiveStream/dynacast reduzem processamento em aparelhos fracos: só decodifica
-      // vídeo remoto no tamanho realmente exibido na tela, e para de codificar camadas
-      // de qualidade que ninguém está assistindo. Resolução de captura mais baixa (360p)
-      // também alivia bastante a câmera em celulares antigos, sem prejudicar muito a
-      // qualidade numa tela pequena de chamada.
+      // adaptiveStream reduz processamento decodificando o vídeo remoto só no tamanho
+      // exibido na tela — ótimo pro CLIENTE (celular fraco decodificando o consultor),
+      // mas no CONSULTOR isso podia baixar demais a qualidade do vídeo do cliente
+      // (câmera pequena na tela) a ponto da gravação sair vazia/com duração zerada.
+      // Por isso fica ligado só pro cliente. dynacast (simulcast de publish) e a
+      // resolução de captura mais baixa continuam pros dois, sem esse problema.
       const room = new Room({
-        adaptiveStream: true,
+        adaptiveStream: role === "CLIENT",
         dynacast: true,
         videoCaptureDefaults: {
           resolution: VideoPresets.h360.resolution,

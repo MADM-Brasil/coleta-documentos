@@ -32,6 +32,9 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
   // Item (áudio ou vídeo) que o consultor está gravando agora — mostra um status "em
   // andamento" no lugar dos controles normais de gravação do cliente.
   const [activeCaptureItemId, setActiveCaptureItemId] = useState<string | null>(null);
+  // Contagem regressiva (3,2,1) exibida por cima do vídeo da chamada, não no card do
+  // item — é lá que o cliente está olhando quando o consultor pede pra se posicionar.
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     publicApi
@@ -96,6 +99,27 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
       socket.disconnect();
     };
   }, [collectionId, token]);
+
+  // Contagem local (aproximada — o consultor faz a mesma do lado dele antes da
+  // gravação de verdade começar) exibida por cima do vídeo da chamada.
+  useEffect(() => {
+    if (!activeCaptureItemId) {
+      setCaptureCountdown(null);
+      return;
+    }
+    let secondsLeft = 3;
+    setCaptureCountdown(secondsLeft);
+    const interval = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        clearInterval(interval);
+        setCaptureCountdown(null);
+      } else {
+        setCaptureCountdown(secondsLeft);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeCaptureItemId]);
 
   function handleUploaded(itemId: string, collectionStatus: string, media?: ClientMedia) {
     setData((prev) =>
@@ -210,6 +234,13 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
           </p>
         </div>
       )}
+
+      {captureCountdown !== null && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60 backdrop-blur-sm">
+          <span className="text-5xl font-bold text-white">{captureCountdown}</span>
+          <p className="text-sm font-medium text-white">Prepare-se, a gravação já vai começar...</p>
+        </div>
+      )}
     </div>
   );
 
@@ -311,6 +342,7 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
                           onUploaded={handleUploaded}
                           missing={missing}
                           captureActive={activeCaptureItemId === item.id}
+                          captureCountdown={activeCaptureItemId === item.id ? captureCountdown : null}
                           getSelfStream={() => session.localVideoRef.current?.srcObject as MediaStream | null}
                         />
                       )}

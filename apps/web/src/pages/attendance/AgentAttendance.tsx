@@ -386,6 +386,13 @@ export function AgentAttendance({ collectionId }: AgentAttendanceProps) {
               </p>
             </div>
           )}
+
+          {captureCountdown !== null && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 backdrop-blur-sm">
+              <span className="text-6xl font-bold text-white">{captureCountdown}</span>
+              <p className="text-sm font-medium text-white">Prepare o cliente para o movimento...</p>
+            </div>
+          )}
         </div>
 
         {session.callState === "active" && (

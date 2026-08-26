@@ -130,15 +130,18 @@ export function DocumentCard({
       )}
 
       {isCountingDown && (
-        <div className="mt-3 flex flex-col items-center gap-1.5 rounded-lg bg-red-50 px-3 py-4">
-          <span className="text-2xl font-bold text-red-600">{captureCountdown}</span>
-          <span className="text-xs font-medium text-red-500">Prepare o cliente — a gravação já vai começar</span>
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 px-3 py-2">
+          <span className="text-sm font-medium text-red-700">
+            Começando em {captureCountdown}... (veja o vídeo da chamada)
+          </span>
           <button
             type="button"
             onClick={onCancelCapture}
-            className="mt-1 text-xs font-medium text-red-500 underline hover:text-red-700"
+            aria-label="Cancelar"
+            title="Cancelar"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-red-500 hover:bg-red-100"
           >
-            Cancelar
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}

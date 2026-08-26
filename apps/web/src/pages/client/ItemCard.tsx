@@ -47,12 +47,24 @@ interface ItemCardProps {
   // true enquanto o consultor está gravando o áudio/vídeo desse item direto da chamada —
   // esconde os controles de gravação do cliente e mostra só um status.
   captureActive?: boolean;
+  // Contagem regressiva (3,2,1) controlada pelo componente pai — exibida por cima do
+  // vídeo da chamada, não aqui; usada só pra saber quando a gravação de fato começou.
+  captureCountdown?: number | null;
   // Só usado no item de vídeo: devolve o stream da própria câmera (já em uso na
   // chamada) pra mostrar um espelho na tela, o cliente vendo o próprio ângulo.
   getSelfStream?: () => MediaStream | null;
 }
 
-export function ItemCard({ token, item, index, onUploaded, missing, captureActive, getSelfStream }: ItemCardProps) {
+export function ItemCard({
+  token,
+  item,
+  index,
+  onUploaded,
+  missing,
+  captureActive,
+  captureCountdown,
+  getSelfStream,
+}: ItemCardProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -63,9 +75,6 @@ export function ItemCard({ token, item, index, onUploaded, missing, captureActiv
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [inPageCameraOpen, setInPageCameraOpen] = useState(false);
   const [captureSeconds, setCaptureSeconds] = useState(0);
-  // Contagem regressiva local (3,2,1) só decorativa/aproximada — o consultor faz a
-  // mesma contagem do lado dele antes de começar a gravação de verdade.
-  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -87,26 +96,6 @@ export function ItemCard({ token, item, index, onUploaded, missing, captureActiv
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!captureActive) {
-      setCaptureSeconds(0);
-      setCaptureCountdown(null);
-      return;
-    }
-    let secondsLeft = 3;
-    setCaptureCountdown(secondsLeft);
-    const countdown = setInterval(() => {
-      secondsLeft -= 1;
-      if (secondsLeft <= 0) {
-        clearInterval(countdown);
-        setCaptureCountdown(null);
-      } else {
-        setCaptureCountdown(secondsLeft);
-      }
-    }, 1000);
-    return () => clearInterval(countdown);
-  }, [captureActive]);
 
   useEffect(() => {
     if (!captureActive || captureCountdown !== null) {
@@ -273,9 +262,8 @@ export function ItemCard({ token, item, index, onUploaded, missing, captureActiv
       </button>
 
       {captureActive && captureCountdown !== null && (
-        <div className="flex flex-col items-center gap-1.5 border-t border-red-100 bg-red-50/60 py-6">
-          <span className="text-3xl font-bold text-red-600">{captureCountdown}</span>
-          <p className="text-sm font-medium text-red-700">Prepare-se, a gravação já vai começar...</p>
+        <div className="border-t border-red-100 bg-red-50/60 px-4 py-3 text-center">
+          <p className="text-sm font-medium text-red-700">Prepare-se — veja a contagem no vídeo da chamada</p>
         </div>
       )}
 

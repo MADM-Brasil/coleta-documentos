@@ -9,9 +9,10 @@ import { extractErrorMessage } from "../../lib/api";
 export function AgentLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // Ex: Make manda o consultor direto pra uma sala específica (/painel/atendimento/:id) —
-  // se ele ainda não tiver logado, volta pra ela depois do login em vez da lista geral.
-  const next = searchParams.get("next") || "/painel";
+  // Make manda o consultor direto pra uma sala específica (/painel/atendimento/:id) —
+  // se ele ainda não tiver logado, volta pra ela depois do login. Não existe painel
+  // geral pra listar salas — só se acessa uma sala específica por link direto.
+  const next = searchParams.get("next") || "/coleta/invalido";
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

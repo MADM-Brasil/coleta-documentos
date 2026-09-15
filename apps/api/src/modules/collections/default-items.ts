@@ -77,4 +77,40 @@ export const DEFAULT_ITEMS = [
     sortOrder: 11,
     multiple: true,
   },
+  // Checklist de Doença Ocupacional — a Carteira de Trabalho já existe acima (CTPS).
+  {
+    type: "PPP" as const,
+    title: "PPP (Perfil Profissiográfico Previdenciário)",
+    description: "Envie o PDF do seu PPP — histórico laboral com exposição a riscos.",
+    sortOrder: 12,
+    multiple: true,
+  },
+  {
+    type: "HOLERITE" as const,
+    title: "Holerite da Época",
+    description: "Envie o(s) comprovante(s) de pagamento do período relevante em PDF.",
+    sortOrder: 13,
+    multiple: true,
+  },
+  {
+    type: "TERMO_RESCISAO" as const,
+    title: "Termo de Rescisão",
+    description: "Envie o PDF do documento que formaliza o fim do vínculo.",
+    sortOrder: 14,
+    multiple: true,
+  },
+  {
+    type: "DOCUMENTO_CARGO" as const,
+    title: "Documento do Cargo",
+    description: "Envie o PDF com a descrição das atividades exercidas.",
+    sortOrder: 15,
+    multiple: true,
+  },
+  {
+    type: "COMPROVACAO_AFASTAMENTO" as const,
+    title: "Comprovação de Afastamento",
+    description: "Envie o PDF do comprovante de afastamento (mesmo CID ou mesma função devem estar documentados).",
+    sortOrder: 16,
+    multiple: true,
+  },
 ];

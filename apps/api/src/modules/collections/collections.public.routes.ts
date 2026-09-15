@@ -32,7 +32,19 @@ const ALLOWED_MIME = new Set([
 // Documentos que só aceitam PDF, independente de "multiple" (acumular mais de um
 // arquivo é uma coisa; exigir PDF é outra — itens de foto/áudio/vídeo também podem
 // aceitar múltiplos arquivos sem virar "só PDF").
-const PDF_ONLY_TYPES = new Set(["CTPS", "CNIS", "LAUDO_MEDICO", "CARTA_CONCESSAO", "COPIA_PROCESSO", "CAT"]);
+const PDF_ONLY_TYPES = new Set([
+  "CTPS",
+  "CNIS",
+  "LAUDO_MEDICO",
+  "CARTA_CONCESSAO",
+  "COPIA_PROCESSO",
+  "CAT",
+  "PPP",
+  "HOLERITE",
+  "TERMO_RESCISAO",
+  "DOCUMENTO_CARGO",
+  "COMPROVACAO_AFASTAMENTO",
+]);
 
 const upload = multer({
   storage: multer.memoryStorage(),

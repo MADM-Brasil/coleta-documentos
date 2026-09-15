@@ -332,6 +332,9 @@ export function ClientAttendance({ collectionId, token }: ClientAttendanceProps)
                       {item.type === "CTPS" && (
                         <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
                       )}
+                      {item.type === "PPP" && (
+                        <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Doença Ocupacional</p>
+                      )}
                       {item.multiple && PDF_MULTI_TYPES.has(item.type) ? (
                         <MultiItemCard token={token} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
                       ) : (

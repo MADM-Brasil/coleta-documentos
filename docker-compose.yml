@@ -1,27 +1,15 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: forms_madm
+      POSTGRES_PASSWORD: forms_madm
+      POSTGRES_DB: forms_madm
     ports:
-      - "4000:4000"
+      - "5432:5432"
     volumes:
-      - api_uploads:/app/apps/api/uploads
-
-  web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - api
+      - forms_madm_pg_data:/var/lib/postgresql/data
 
 volumes:
-  api_uploads:
+  forms_madm_pg_data:

@@ -7,6 +7,7 @@ import axios from "axios";
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "";
 
 export const publicApi = axios.create({ baseURL: `${apiBaseUrl}/public/collections` });
+export const watchApi = axios.create({ baseURL: `${apiBaseUrl}/public/watch` });
 
 export interface ApiErrorShape {
   error?: { code: string; message: string };

@@ -10,15 +10,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-// Sem variantes "dark:" de propósito — o app usa fundo branco sempre, em qualquer
-// tela. Deixar classes dark: aqui fazia o texto ficar quase invisível em celulares
-// com o modo escuro do sistema ativado (o fundo continuava branco, só o texto mudava).
 const variantClasses: Record<Variant, string> = {
   primary:
     "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-sm disabled:bg-brand-300",
-  secondary: "bg-slate-900 text-white hover:bg-slate-800",
-  outline: "border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100",
-  ghost: "text-slate-600 hover:bg-slate-100",
+  secondary:
+    "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200",
+  outline:
+    "border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-surface-border dark:text-slate-200 dark:hover:bg-surface-hover",
+  ghost: "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-surface-hover",
   danger: "bg-red-600 text-white hover:bg-red-700",
 };
 

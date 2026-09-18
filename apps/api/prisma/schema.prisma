@@ -14,7 +14,7 @@ datasource db {
 // CollectionStatus: CREATED | SENT | OPENED | IN_PROGRESS | COMPLETED | EXPIRED | CANCELLED
 // CollectionItemType: RG_FRENTE | RG_VERSO | COMPROVANTE | AUDIO | VIDEO |
 //   CTPS | CNIS | LAUDO_MEDICO | CARTA_CONCESSAO | COPIA_PROCESSO | CAT |
-//   PPP | HOLERITE | TERMO_RESCISAO | DOCUMENTO_CARGO | COMPROVACAO_AFASTAMENTO
+//   PPP | HOLERITE_EPOCA | TERMO_RESCISAO | DOCUMENTO_CARGO | COMPROVACAO_AFASTAMENTO
 // CollectionItemStatus: PENDING | UPLOADED | APPROVED | REJECTED
 // MediaStatus: PENDING | UPLOADED | FAILED | DELETED | REPLACED
 // ActorType: CLIENT | SYSTEM
@@ -37,14 +37,16 @@ model CollectionRequest {
   id          String    @id @default(uuid())
   clientId    String
   tokenHash   String    @unique
-  // Token do consultor para a sala de atendimento (vídeo). Nullable porque coletas
-  // criadas antes dessa feature não têm — o link antigo /coleta/:token continua
-  // funcionando normalmente sem ele.
-  agentTokenHash String? @unique
-  // Nome do consultor responsável, informado na criação manual pela sala (painel) —
-  // apenas exibição, não é usado pra autenticação (o login continua sendo a senha
-  // compartilhada da equipe).
-  agentName   String?
+  // Token do consultor: link de acompanhamento (só leitura, tempo real) enviado
+  // primeiro pro CRM. O consultor usa a tela dele pra copiar o link do cliente
+  // (tokenPlain) e repassar.
+  consultantTokenHash String? @unique
+  // Guardado em texto plano (diferente do tokenHash, que é hash) só pra poder
+  // exibir/copiar o link do cliente na tela do consultor.
+  tokenPlain  String?
+  // Código curto (8 chars) pra encurtar o link do cliente que o consultor
+  // compartilha — só um atalho de redirecionamento, não autentica nada sozinho.
+  shortCode   String?   @unique
   status      String    @default("CREATED")
   // URL de webhook (ex: gatilho "Custom Webhook" do Make) para onde o sistema
   // notifica em tempo real cada documento enviado e a conclusão da coleta.
@@ -78,9 +80,8 @@ model CollectionItem {
   // laudos médicos em PDF) — o item fica "UPLOADED" a partir do 1º arquivo,
   // mas continua aceitando mais uploads sem substituir os anteriores.
   multiple            Boolean  @default(false)
-  // Preenchido pelo consultor ao solicitar reenvio (ex: "Imagem cortada"). Limpo
-  // quando o cliente envia um novo arquivo para o item.
-  rejectionReason     String?
+  // Motivo informado pelo consultor ao reprovar (status = REJECTED). Limpo quando aprovado.
+  reviewNote          String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

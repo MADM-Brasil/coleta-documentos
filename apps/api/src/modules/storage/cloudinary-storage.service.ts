@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import { StorageService, UploadOptions, UploadResult } from "./storage.service";
 
 cloudinary.config({
@@ -14,24 +14,30 @@ function resourceTypeFor(mimeType: string): "image" | "video" | "raw" {
 }
 
 export class CloudinaryStorageService implements StorageService {
-  async upload(file: Buffer, options: UploadOptions): Promise<UploadResult> {
+  async upload(filePath: string, options: UploadOptions): Promise<UploadResult> {
     const resourceType = resourceTypeFor(options.mimeType);
-    // O Cloudinary já anexa a extensão certa sozinho (baseado no conteúdo) —
-    // tirar a extensão do nosso key evita gerar "arquivo.png.png".
-    const publicId = options.key.replace(/\.[a-zA-Z0-9]+$/, "");
+    // Para "image"/"video" o Cloudinary já anexa a extensão certa sozinho (baseado no
+    // conteúdo) — tirar do nosso key evita "arquivo.png.png". Mas pra "raw" (PDFs) ele
+    // NÃO anexa nada: sem extensão no public_id, o arquivo baixa sem ".pdf" e o
+    // Windows/visualizador não reconhece o formato. Por isso mantemos a extensão só nesse caso.
+    const publicId =
+      resourceType === "raw" ? options.key : options.key.replace(/\.[a-zA-Z0-9]+$/, "");
 
-    const result = await new Promise<{ public_id: string; secure_url: string; bytes: number }>(
-      (resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { resource_type: resourceType, public_id: publicId, folder: "forms-madm" },
-          (err, res) => {
-            if (err || !res) return reject(err ?? new Error("Falha ao enviar para o Cloudinary."));
-            resolve(res as any);
-          }
-        );
-        stream.end(file);
-      }
-    );
+    // upload_large lê o arquivo do disco por streaming e manda em pedaços — não
+    // carrega o vídeo/arquivo inteiro na memória do servidor, e evita o limite de
+    // tamanho do upload simples pra vídeos maiores.
+    // O retorno de upload_large não é uma Promise de verdade (é o stream interno) —
+    // precisa do callback explícito pra saber quando terminou.
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      cloudinary.uploader.upload_large(
+        filePath,
+        { resource_type: resourceType, public_id: publicId, folder: "forms-madm" },
+        (err, res) => {
+          if (err || !res) return reject(err ?? new Error("Falha ao enviar para o Cloudinary."));
+          resolve(res);
+        }
+      );
+    });
 
     return { key: result.public_id, url: result.secure_url, size: result.bytes };
   }

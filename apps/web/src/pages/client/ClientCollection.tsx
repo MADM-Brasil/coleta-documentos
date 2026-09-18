@@ -1,14 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, HelpCircle, Loader2, Menu, ShieldCheck, Sparkles } from "lucide-react";
 import { publicApi, extractErrorMessage } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
-import { ProgressBar } from "../../components/ui/ProgressBar";
 import { ItemCard } from "./ItemCard";
 import { MultiItemCard } from "./MultiItemCard";
-import { PDF_MULTI_TYPES, type ClientCollection as ClientCollectionData, type ClientMedia } from "./types";
+import type { ClientCollection as ClientCollectionData, ClientItem, ClientMedia } from "./types";
+import { mockClientCollection } from "../demo/mockData";
 
 type Stage = "loading" | "error" | "intro" | "checklist" | "completed";
+
+interface Category {
+  key: string;
+  label: string;
+  title: string;
+  description: string;
+  types: ClientItem["type"][];
+}
+
+const CATEGORIES: Category[] = [
+  {
+    key: "documentacao",
+    label: "Documentação",
+    title: "Documentação",
+    description: "Envie os documentos básicos relacionados ao seu acidente.",
+    types: ["RG_FRENTE", "RG_VERSO", "COMPROVANTE", "AUDIO", "VIDEO"],
+  },
+  {
+    key: "gov",
+    label: "GOV",
+    title: "Documentos do GOV",
+    description: "Envie os documentos relacionados a benefícios e vínculos governamentais.",
+    types: ["CTPS", "CNIS", "LAUDO_MEDICO", "CARTA_CONCESSAO", "COPIA_PROCESSO", "CAT"],
+  },
+  {
+    key: "ocupacional",
+    label: "Doença Ocupacional",
+    title: "Documentos de Doença Ocupacional",
+    description: "Envie os documentos relacionados à sua doença ocupacional.",
+    types: ["PPP", "HOLERITE_EPOCA", "TERMO_RESCISAO", "DOCUMENTO_CARGO", "COMPROVACAO_AFASTAMENTO"],
+  },
+];
 
 export function ClientCollection() {
   const { token } = useParams<{ token: string }>();
@@ -17,9 +49,18 @@ export function ClientCollection() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showMissing, setShowMissing] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const stageRef = useRef<Stage>("loading");
+  stageRef.current = stage;
 
   useEffect(() => {
     if (!token) return;
+    // Rota de demonstração (sem depender do banco/API) — só pra visualizar o layout.
+    if (token === "demo") {
+      setData(mockClientCollection);
+      setStage("intro");
+      return;
+    }
     publicApi
       .get<ClientCollectionData>(`/${token}`)
       .then((res) => {
@@ -32,6 +73,23 @@ export function ClientCollection() {
       });
   }, [token]);
 
+  // Enquanto o cliente está no checklist, busca o status a cada poucos segundos —
+  // assim aprovações/reprovações do consultor aparecem sem precisar dar refresh.
+  useEffect(() => {
+    if (!token || token === "demo") return;
+    const interval = setInterval(() => {
+      if (stageRef.current !== "checklist") return;
+      publicApi
+        .get<ClientCollectionData>(`/${token}`)
+        .then((res) => {
+          setData(res.data);
+          if (res.data.status === "COMPLETED") setStage("completed");
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   function handleUploaded(itemId: string, collectionStatus: string, media?: ClientMedia) {
     setData((prev) =>
       prev
@@ -39,7 +97,7 @@ export function ClientCollection() {
             ...prev,
             items: prev.items.map((i) =>
               i.id === itemId
-                ? { ...i, status: "UPLOADED", media: media ? [...i.media, media] : i.media }
+                ? { ...i, status: "UPLOADED", reviewNote: null, media: media ? [...i.media, media] : i.media }
                 : i
             ),
           }
@@ -52,9 +110,16 @@ export function ClientCollection() {
 
   async function handleFinalize() {
     if (!data) return;
-    const pending = data.items.some((i) => i.required && i.status !== "UPLOADED");
-    if (pending) {
+    const firstPendingCategory = CATEGORIES.findIndex((cat) =>
+      data.items.some((i) => cat.types.includes(i.type) && i.required && i.status !== "APPROVED")
+    );
+    if (firstPendingCategory !== -1) {
       setShowMissing(true);
+      setActiveTab(firstPendingCategory);
+      return;
+    }
+    if (token === "demo") {
+      setStage("completed");
       return;
     }
     setFinalizing(true);
@@ -97,10 +162,6 @@ export function ClientCollection() {
 
   if (!data) return null;
 
-  const done = data.items.filter((i) => i.status === "UPLOADED").length;
-  const total = data.items.length;
-  const allSent = done === total;
-
   if (stage === "completed") {
     return (
       <Shell>
@@ -142,41 +203,57 @@ export function ClientCollection() {
     );
   }
 
+  const category = CATEGORIES[activeTab];
+  const categoryItems = data.items.filter((i) => category.types.includes(i.type));
+  const isLastTab = activeTab === CATEGORIES.length - 1;
+
   return (
     <Shell>
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <h1 className="text-xl font-bold text-slate-900">Documentação</h1>
-          <p className="text-sm text-slate-500">
-            {allSent
-              ? "Tudo enviado! Estamos finalizando seu atendimento."
-              : "Envie cada item abaixo. Você pode tirar uma foto na hora ou escolher da galeria."}
-          </p>
-          <div className="flex items-center gap-3">
-            <ProgressBar value={done} total={total} className="flex-1" />
-            <span className="whitespace-nowrap text-sm font-semibold text-slate-700">
-              {done}/{total}
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Progresso geral</span>
+            <span>
+              {activeTab + 1}/{CATEGORIES.length}
             </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-all duration-500"
+              style={{ width: `${((activeTab + 1) / CATEGORIES.length) * 100}%` }}
+            />
           </div>
         </div>
 
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {CATEGORIES.map((cat, idx) => (
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => setActiveTab(idx)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                idx === activeTab
+                  ? "bg-brand-600 text-white"
+                  : "bg-white text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900">{category.title}</h1>
+          <p className="text-sm text-slate-500">{category.description}</p>
+        </div>
+
         <div className="space-y-3">
-          {data.items.map((item, idx) => {
-            const missing = showMissing && item.required && item.status !== "UPLOADED";
-            return (
-              <div key={item.id}>
-                {item.type === "CTPS" && (
-                  <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Documentos do GOV</p>
-                )}
-                {item.type === "PPP" && (
-                  <p className="mb-3 mt-2 text-sm font-bold text-slate-900">Doença Ocupacional</p>
-                )}
-                {item.multiple && PDF_MULTI_TYPES.has(item.type) ? (
-                  <MultiItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
-                ) : (
-                  <ItemCard token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
-                )}
-              </div>
+          {categoryItems.map((item, idx) => {
+            const missing = showMissing && item.required && item.status !== "APPROVED";
+            return item.multiple ? (
+              <MultiItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
+            ) : (
+              <ItemCard key={item.id} token={token!} item={item} index={idx} onUploaded={handleUploaded} missing={missing} />
             );
           })}
         </div>
@@ -191,10 +268,16 @@ export function ClientCollection() {
           <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{errorMessage}</div>
         )}
 
-        <Button size="lg" className="w-full" onClick={handleFinalize} disabled={finalizing}>
-          {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Finalizar Envio
-        </Button>
+        {isLastTab ? (
+          <Button size="lg" className="w-full" onClick={handleFinalize} disabled={finalizing}>
+            {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Finalizar envio
+          </Button>
+        ) : (
+          <Button size="lg" className="w-full" onClick={() => setActiveTab((t) => t + 1)}>
+            Continuar
+          </Button>
+        )}
       </div>
     </Shell>
   );
@@ -204,11 +287,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-50/40 to-white">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 py-8">
-        <header className="mb-6 flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            M
+        <header className="mb-6 flex items-center justify-between">
+          <Menu className="h-5 w-5 text-slate-400" />
+          <div className="flex items-center gap-2">
+            <img src="/favicon.png" alt="MADM" className="h-9 w-9 rounded-lg object-cover" />
+            <span className="font-semibold text-slate-700">MADM</span>
           </div>
-          <span className="font-semibold text-slate-700">MADM</span>
+          <HelpCircle className="h-5 w-5 text-slate-400" />
         </header>
         <main className="flex-1">{children}</main>
         <footer className="mt-8 text-center text-xs text-slate-400">

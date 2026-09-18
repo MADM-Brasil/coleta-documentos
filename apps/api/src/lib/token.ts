@@ -10,6 +10,22 @@ export function hashToken(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");
 }
 
+// Alfabeto sem caracteres ambíguos (sem 0/O, 1/I/l) — pro consultor conseguir
+// ditar/digitar o código curto sem confusão.
+const SHORT_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+
+// Código curto (8 chars) usado só como atalho de redirecionamento pro link
+// completo do cliente — não substitui o token real, que continua sendo o que
+// autentica as rotas.
+export function generateShortCode(): string {
+  const bytes = crypto.randomBytes(8);
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += SHORT_CODE_ALPHABET[bytes[i] % SHORT_CODE_ALPHABET.length];
+  }
+  return code;
+}
+
 export function generateStorageKey(originalFilename: string): string {
   const ext = originalFilename.includes(".") ? originalFilename.split(".").pop() : "";
   const id = crypto.randomUUID();

@@ -23,18 +23,4 @@ export const env = {
   // (documento enviado, coleta concluída), independente do que vier em "callbackUrl"
   // na chamada de criação — o Make não precisa mais mandar esse campo.
   defaultCallbackUrl: process.env.DEFAULT_CALLBACK_URL,
-  // Sala de atendimento (vídeo, LiveKit). Opcionais: se ausentes, os endpoints de
-  // vídeo respondem 503 mas o resto do sistema (formulário, upload, webhook Make)
-  // continua funcionando normalmente.
-  livekitApiKey: process.env.LIVEKIT_API_KEY,
-  livekitApiSecret: process.env.LIVEKIT_API_SECRET,
-  livekitUrl: process.env.LIVEKIT_URL,
-  // Senha única compartilhada pela equipe de consultores para acessar o painel de
-  // atendimento (/painel) — sem cadastro de usuário. Trocar por login individual no
-  // futuro não deve exigir mudar o resto da arquitetura de sessão.
-  agentPassword: process.env.AGENT_PASSWORD,
-  agentSessionSecret: process.env.AGENT_SESSION_SECRET ?? "dev-only-troque-em-producao",
-  // Só pra demonstração/apresentação — desliga a exigência de login no painel do
-  // consultor (qualquer um com o link entra direto). NUNCA deixar "true" em produção.
-  agentAuthDisabled: process.env.DISABLE_AGENT_AUTH === "true",
 };

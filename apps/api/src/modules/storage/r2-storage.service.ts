@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl as presign } from "@aws-sdk/s3-request-presigner";
 import { StorageService, UploadOptions, UploadResult } from "./storage.service";
@@ -15,16 +16,18 @@ const client = new S3Client({
 });
 
 export class R2StorageService implements StorageService {
-  async upload(file: Buffer, options: UploadOptions): Promise<UploadResult> {
+  async upload(filePath: string, options: UploadOptions): Promise<UploadResult> {
+    const size = fs.statSync(filePath).size;
     await client.send(
       new PutObjectCommand({
         Bucket: bucket,
         Key: options.key,
-        Body: file,
+        Body: fs.createReadStream(filePath),
         ContentType: options.mimeType,
+        ContentLength: size,
       })
     );
-    return { key: options.key, url: options.key, size: file.length };
+    return { key: options.key, url: options.key, size };
   }
 
   async delete(key: string): Promise<void> {

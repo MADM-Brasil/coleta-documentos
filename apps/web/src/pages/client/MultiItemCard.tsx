@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Check, Clock, FileText, Loader2, X } from "lucide-react";
+import { AlertCircle, Check, Clock, FileText, Loader2, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { publicApi, extractErrorMessage } from "../../lib/api";
 import type { ClientItem, ClientMedia } from "./types";
@@ -20,8 +20,9 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const approved = item.status === "APPROVED";
-  const pendingReview = item.status === "UPLOADED";
-  const done = pendingReview || approved;
+  const inReview = item.status === "UPLOADED";
+  const rejected = item.status === "REJECTED";
+  const openable = !approved;
 
   async function handleFileSelected(selected: FileList | null) {
     const file = selected?.[0];
@@ -52,31 +53,37 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
       className={`animate-slide-up overflow-hidden rounded-2xl border bg-white shadow-soft transition-all ${
         approved
           ? "border-emerald-200"
-          : pendingReview
-          ? "border-amber-200"
-          : missing
-          ? "border-red-300"
-          : "border-slate-200"
+          : rejected
+            ? "border-red-300"
+            : inReview
+              ? "border-amber-200"
+              : missing
+                ? "border-red-300"
+                : "border-slate-200"
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => openable && setOpen((v) => !v)}
         className="flex w-full items-center gap-4 p-4 text-left active:bg-slate-50"
       >
         <div
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
             approved
               ? "bg-emerald-100 text-emerald-600"
-              : pendingReview
-              ? "bg-amber-100 text-amber-600"
-              : "bg-brand-50 text-brand-600"
+              : rejected
+                ? "bg-red-100 text-red-600"
+                : inReview
+                  ? "bg-amber-100 text-amber-600"
+                  : "bg-brand-50 text-brand-600"
           }`}
         >
           {approved ? (
             <Check className="h-6 w-6" strokeWidth={2.5} />
-          ) : pendingReview ? (
+          ) : rejected ? (
+            <AlertCircle className="h-6 w-6" />
+          ) : inReview ? (
             <Clock className="h-6 w-6" />
           ) : (
             <FileText className="h-6 w-6" />
@@ -84,33 +91,30 @@ export function MultiItemCard({ token, item, index, onUploaded, missing }: Multi
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-slate-900">{item.title}</p>
-          <p className="truncate text-sm text-slate-500">
+          <p className={`truncate text-sm ${rejected ? "text-red-600" : "text-slate-500"}`}>
             {approved
               ? "Aprovado"
-              : pendingReview
-              ? "Em análise"
-              : item.media.length > 0
-              ? `${item.media.length} arquivo${item.media.length > 1 ? "s" : ""} enviado${item.media.length > 1 ? "s" : ""}`
-              : item.description}
+              : rejected
+                ? item.reviewNote
+                  ? `Reprovado: ${item.reviewNote}`
+                  : "Reprovado — reenvie o documento"
+                : item.media.length > 0
+                  ? `${item.media.length} arquivo${item.media.length > 1 ? "s" : ""} enviado${item.media.length > 1 ? "s" : ""}${inReview ? " · Em análise" : ""}`
+                  : item.description}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
-            missing ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          {item.media.length > 0 ? "Adicionar" : "Enviar"}
-        </span>
+        {openable && (
+          <span
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${
+              missing || rejected ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {item.media.length > 0 ? "Adicionar" : "Enviar"}
+          </span>
+        )}
       </button>
 
-      {item.status === "REJECTED" && item.rejectionReason && (
-        <div className="mx-4 mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          <p className="font-medium">Precisamos que você envie novamente.</p>
-          <p className="text-red-600">Motivo: {item.rejectionReason}</p>
-        </div>
-      )}
-
-      {open && (
+      {open && openable && (
         <div className="border-t border-slate-100 p-4 animate-fade-in">
           {item.instructions && (
             <div className="mb-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-800">{item.instructions}</div>

@@ -5,11 +5,21 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../middlewares/error";
 import { Errors } from "../../lib/errors";
-import { createCollectionRequest } from "../collections/collections.service";
+import { generateCollectionToken, generateShortCode } from "../../lib/token";
+import { DEFAULT_ITEMS } from "../collections/default-items";
 import { storageService } from "../storage";
 import { env } from "../../config/env";
 
 const router = Router();
+
+async function generateUniqueShortCode(): Promise<string> {
+  for (let i = 0; i < 5; i++) {
+    const code = generateShortCode();
+    const exists = await prisma.collectionRequest.findUnique({ where: { shortCode: code } });
+    if (!exists) return code;
+  }
+  throw new Error("Não foi possível gerar um código curto único.");
+}
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -31,26 +41,42 @@ router.post(
   asyncHandler(async (req, res) => {
     const { name, phone, email, externalId, expiresInDays, callbackUrl } = createSchema.parse(req.body);
 
-    const { collection, clientLink } = await createCollectionRequest({
-      name,
-      phone,
-      email,
-      externalId,
-      expiresInDays,
-      callbackUrl,
+    let client = externalId ? await prisma.client.findFirst({ where: { externalId } }) : null;
+    if (!client) {
+      client = await prisma.client.create({ data: { name, phone, email, externalId } });
+    }
+
+    const { raw, hash } = generateCollectionToken();
+    const consultant = generateCollectionToken();
+    const shortCode = await generateUniqueShortCode();
+
+    // Uma URL fixa configurada no servidor (DEFAULT_CALLBACK_URL) sempre tem prioridade
+    // sobre o que vier no corpo da requisição — assim o Make não precisa mais mandar
+    // "callbackUrl" a cada chamada.
+    const effectiveCallbackUrl = env.defaultCallbackUrl ?? callbackUrl;
+
+    const collection = await prisma.collectionRequest.create({
+      data: {
+        clientId: client.id,
+        tokenHash: hash,
+        tokenPlain: raw,
+        shortCode,
+        consultantTokenHash: consultant.hash,
+        status: "SENT",
+        callbackUrl: effectiveCallbackUrl,
+        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+        items: { create: DEFAULT_ITEMS },
+      },
     });
 
-    // "link" (= agentLink) é o que o Make coloca na nota/CRM pro CONSULTOR — abre a sala
-    // direto (pede login com a senha da equipe se ainda não estiver logado). O consultor
-    // é quem manda o clientLink pro cliente, clicando em "Compartilhar" dentro da sala.
-    const agentLink = `${env.clientUrl}/painel/atendimento/${collection.id}`;
-
+    // "link" vai pro CRM primeiro e é a tela do consultor (acompanhamento em tempo
+    // real, só leitura); dentro dela tem a opção de copiar "clientLink" pra mandar
+    // pro cliente preencher no celular.
     res.status(201).json({
       tipo: "LINK",
       collectionId: collection.id,
-      link: agentLink,
-      agentLink,
-      clientLink,
+      link: `${env.clientUrl}/acompanhar/${consultant.raw}`,
+      clientLink: `${env.appUrl}/s/${shortCode}`,
       expiresAt: collection.expiresAt,
     });
   })
@@ -81,13 +107,24 @@ router.get(
       );
     }
 
-    // "cross-origin" (em vez do padrão "same-origin" do Helmet) — essa rota existe
-    // justamente pra ser consumida de outro domínio (Make, e o preview de documentos
-    // do painel do consultor, que roda num domínio separado da API).
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("Content-Type", media.mimeType);
+    // "inline" (em vez de "attachment") deixa o navegador exibir o arquivo direto
+    // (imagem, PDF, vídeo) em vez de forçar o download — usado no preview do consultor.
     res.setHeader("Content-Disposition", `inline; filename="${media.originalFilename}"`);
     res.sendFile(filePath);
+  })
+);
+
+// Link curto que o consultor compartilha com o cliente — só redireciona pro
+// link real de coleta, não autentica nada por si só. Montado na raiz da API
+// (não em /webhook) pra manter o link o mais curto possível.
+export const shortLinkRouter = Router();
+shortLinkRouter.get(
+  "/s/:code",
+  asyncHandler(async (req, res) => {
+    const collection = await prisma.collectionRequest.findUnique({ where: { shortCode: req.params.code } });
+    if (!collection || !collection.tokenPlain) throw Errors.notFound("Link não encontrado.");
+    res.redirect(`${env.clientUrl}/coleta/${collection.tokenPlain}`);
   })
 );
 

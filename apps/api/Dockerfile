@@ -1,24 +1,33 @@
-FROM node:20-bookworm-slim
+# Build a partir da raiz do monorepo (Dokploy: "Build Context Path" = raiz do repo,
+# "Dockerfile Path" = apps/api/Dockerfile) — precisa do root package.json/lockfile
+# pro npm workspaces resolver as dependências certas.
 
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Prisma precisa do OpenSSL disponível no sistema.
-RUN apt-get update -y \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-# Copia só os manifestos primeiro (cache de camada) — o package.json do apps/web
-# precisa existir pro npm resolver os workspaces do monorepo, mesmo instalando
-# só o workspace da API.
 COPY package.json package-lock.json ./
+# npm precisa achar o package.json dos DOIS workspaces (o lockfile referencia
+# apps/api e apps/web juntos), mesmo buildando só a API aqui.
+COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
-COPY apps/api ./apps/api
+COPY apps/api/prisma apps/api/prisma
+RUN npm ci --workspace=apps/api --include-workspace-root
 
-RUN npm install --workspace=apps/api
+COPY apps/api/tsconfig.json apps/api/tsconfig.json
+COPY apps/api/src apps/api/src
 RUN npm run build --workspace=apps/api
 
-WORKDIR /app/apps/api
+FROM node:20-alpine AS runtime
+WORKDIR /app
 ENV NODE_ENV=production
-EXPOSE 4000
 
+# npm workspaces hospeda (hoist) a maioria das deps em /app/node_modules — o Node
+# resolve pra cima a partir de apps/api/ automaticamente, não precisa duplicar.
+COPY --from=builder /app/node_modules node_modules
+COPY --from=builder /app/apps/api/dist apps/api/dist
+COPY apps/api/prisma apps/api/prisma
+COPY apps/api/package.json apps/api/package.json
+
+WORKDIR /app/apps/api
+EXPOSE 4000
 CMD ["npm", "start"]

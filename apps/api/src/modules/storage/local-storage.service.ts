@@ -5,19 +5,20 @@ import { StorageService, UploadOptions, UploadResult } from "./storage.service";
 
 const uploadsRoot = path.resolve(process.cwd(), env.uploadsDir);
 
-// Usado pelo callback do Make, que às vezes precisa embutir o arquivo em base64
-// (fotos pequenas) além de só mandar o link — só faz sentido no modo LOCAL, os
-// outros provedores já servem a própria URL pública.
-export async function readLocalFile(key: string): Promise<Buffer> {
-  return fs.readFile(path.join(uploadsRoot, key));
-}
-
 export class LocalStorageService implements StorageService {
-  async upload(file: Buffer, options: UploadOptions): Promise<UploadResult> {
+  async upload(filePath: string, options: UploadOptions): Promise<UploadResult> {
     await fs.mkdir(uploadsRoot, { recursive: true });
-    const filePath = path.join(uploadsRoot, options.key);
-    await fs.writeFile(filePath, file);
-    return { key: options.key, url: `/uploads/${options.key}`, size: file.length };
+    const destPath = path.join(uploadsRoot, options.key);
+    try {
+      // Move é instantâneo (mesmo disco) — evita reler o arquivo inteiro pra memória.
+      await fs.rename(filePath, destPath);
+    } catch {
+      // Caminhos em discos/mounts diferentes não suportam rename — cai pra copiar por streaming.
+      await fs.copyFile(filePath, destPath);
+      await fs.rm(filePath, { force: true });
+    }
+    const { size } = await fs.stat(destPath);
+    return { key: options.key, url: `/uploads/${options.key}`, size };
   }
 
   async delete(key: string): Promise<void> {

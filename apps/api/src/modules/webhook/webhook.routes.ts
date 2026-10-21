@@ -12,22 +12,28 @@ import { env } from "../../config/env";
 
 const router = Router();
 
-async function generateUniqueShortCode(): Promise<string> {
+async function generateUniqueShortCode(field: "shortCode" | "consultantShortCode"): Promise<string> {
   for (let i = 0; i < 5; i++) {
     const code = generateShortCode();
-    const exists = await prisma.collectionRequest.findUnique({ where: { shortCode: code } });
+    const exists = await prisma.collectionRequest.findUnique({ where: { [field]: code } as never });
     if (!exists) return code;
   }
   throw new Error("Não foi possível gerar um código curto único.");
 }
+
+// Links não expiram mais (a pedido do cliente) — usamos uma data bem distante
+// em vez de tornar expiresAt opcional, pra não mexer no schema/nas checagens
+// existentes em requireCollectionToken/requireConsultantToken.
+const NO_EXPIRATION_YEARS = 100;
 
 const createSchema = z.object({
   name: z.string().min(1),
   phone: z.string().optional(),
   email: z.string().email().optional(),
   externalId: z.string().optional(),
-  // Padrão de 2 dias (48h) — prazo para o cliente concluir o envio antes do link expirar.
-  expiresInDays: z.number().min(1).max(90).default(2),
+  // Mantido só por compatibilidade com quem ainda manda esse campo — não é mais
+  // usado pra calcular expiresAt, os links não expiram.
+  expiresInDays: z.number().min(1).max(90).optional(),
   // URL do gatilho "Custom Webhook" do Make — o sistema chama essa URL em tempo real
   // a cada documento enviado e quando a coleta é concluída.
   callbackUrl: z.string().url().optional(),
@@ -39,7 +45,7 @@ const createSchema = z.object({
 router.post(
   "/collections",
   asyncHandler(async (req, res) => {
-    const { name, phone, email, externalId, expiresInDays, callbackUrl } = createSchema.parse(req.body);
+    const { name, phone, email, externalId, callbackUrl } = createSchema.parse(req.body);
 
     let client = externalId ? await prisma.client.findFirst({ where: { externalId } }) : null;
     if (!client) {
@@ -48,7 +54,8 @@ router.post(
 
     const { raw, hash } = generateCollectionToken();
     const consultant = generateCollectionToken();
-    const shortCode = await generateUniqueShortCode();
+    const shortCode = await generateUniqueShortCode("shortCode");
+    const consultantShortCode = await generateUniqueShortCode("consultantShortCode");
 
     // Uma URL fixa configurada no servidor (DEFAULT_CALLBACK_URL) sempre tem prioridade
     // sobre o que vier no corpo da requisição — assim o Make não precisa mais mandar
@@ -62,9 +69,11 @@ router.post(
         tokenPlain: raw,
         shortCode,
         consultantTokenHash: consultant.hash,
+        consultantTokenPlain: consultant.raw,
+        consultantShortCode,
         status: "SENT",
         callbackUrl: effectiveCallbackUrl,
-        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + NO_EXPIRATION_YEARS * 365 * 24 * 60 * 60 * 1000),
         items: { create: DEFAULT_ITEMS },
       },
     });
@@ -75,7 +84,7 @@ router.post(
     res.status(201).json({
       tipo: "LINK",
       collectionId: collection.id,
-      link: `${env.clientUrl}/acompanhar/${consultant.raw}`,
+      link: `${env.appUrl}/c/${consultantShortCode}`,
       clientLink: `${env.appUrl}/s/${shortCode}`,
       expiresAt: collection.expiresAt,
     });
@@ -125,6 +134,18 @@ shortLinkRouter.get(
     const collection = await prisma.collectionRequest.findUnique({ where: { shortCode: req.params.code } });
     if (!collection || !collection.tokenPlain) throw Errors.notFound("Link não encontrado.");
     res.redirect(`${env.clientUrl}/coleta/${collection.tokenPlain}`);
+  })
+);
+
+// Mesma ideia, só que pro link do consultor (o que vai pro CRM/Make).
+shortLinkRouter.get(
+  "/c/:code",
+  asyncHandler(async (req, res) => {
+    const collection = await prisma.collectionRequest.findUnique({
+      where: { consultantShortCode: req.params.code },
+    });
+    if (!collection || !collection.consultantTokenPlain) throw Errors.notFound("Link não encontrado.");
+    res.redirect(`${env.clientUrl}/acompanhar/${collection.consultantTokenPlain}`);
   })
 );
 

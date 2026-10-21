@@ -44,9 +44,13 @@ model CollectionRequest {
   // Guardado em texto plano (diferente do tokenHash, que é hash) só pra poder
   // exibir/copiar o link do cliente na tela do consultor.
   tokenPlain  String?
+  // Idem, só pro redirecionamento do link curto do consultor (/c/:code) funcionar.
+  consultantTokenPlain String?
   // Código curto (8 chars) pra encurtar o link do cliente que o consultor
   // compartilha — só um atalho de redirecionamento, não autentica nada sozinho.
   shortCode   String?   @unique
+  // Idem, mas pro link do consultor — é esse que vai pro CRM/Make agora.
+  consultantShortCode String? @unique
   status      String    @default("CREATED")
   // URL de webhook (ex: gatilho "Custom Webhook" do Make) para onde o sistema
   // notifica em tempo real cada documento enviado e a conclusão da coleta.

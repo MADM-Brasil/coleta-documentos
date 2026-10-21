@@ -1,33 +1,28 @@
-# Build a partir da raiz do monorepo (Dokploy: "Build Context Path" = raiz do repo,
-# "Dockerfile Path" = apps/api/Dockerfile) — precisa do root package.json/lockfile
-# pro npm workspaces resolver as dependências certas.
+# Assume que o contexto do build é a PRÓPRIA pasta apps/api (não a raiz do
+# monorepo) — é o que o Dokploy usa de fato quando "Docker File" aponta pra um
+# subdiretório, independente do que for configurado em "Docker Context Path".
+# Por isso não depende do package.json/lockfile raiz: instala só com o
+# package.json local (sem workspaces do npm).
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-# npm precisa achar o package.json dos DOIS workspaces (o lockfile referencia
-# apps/api e apps/web juntos), mesmo buildando só a API aqui.
-COPY apps/api/package.json apps/api/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY apps/api/prisma apps/api/prisma
-RUN npm ci --workspace=apps/api --include-workspace-root
+COPY package.json ./
+COPY prisma prisma
+RUN npm install
 
-COPY apps/api/tsconfig.json apps/api/tsconfig.json
-COPY apps/api/src apps/api/src
-RUN npm run build --workspace=apps/api
+COPY tsconfig.json ./
+COPY src src
+RUN npm run build
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# npm workspaces hospeda (hoist) a maioria das deps em /app/node_modules — o Node
-# resolve pra cima a partir de apps/api/ automaticamente, não precisa duplicar.
 COPY --from=builder /app/node_modules node_modules
-COPY --from=builder /app/apps/api/dist apps/api/dist
-COPY apps/api/prisma apps/api/prisma
-COPY apps/api/package.json apps/api/package.json
+COPY --from=builder /app/dist dist
+COPY prisma prisma
+COPY package.json ./
 
-WORKDIR /app/apps/api
 EXPOSE 4000
 CMD ["npm", "start"]

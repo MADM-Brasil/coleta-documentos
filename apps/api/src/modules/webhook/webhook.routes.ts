@@ -80,12 +80,14 @@ router.post(
 
     // "link" vai pro CRM primeiro e é a tela do consultor (acompanhamento em tempo
     // real, só leitura); dentro dela tem a opção de copiar "clientLink" pra mandar
-    // pro cliente preencher no celular.
+    // pro cliente preencher no celular. Agora o próprio código curto é a URL final
+    // (requireCollectionToken/requireConsultantToken aceitam o shortCode direto),
+    // então não precisa mais passar pelo redirect /s/ ou /c/.
     res.status(201).json({
       tipo: "LINK",
       collectionId: collection.id,
-      link: `${env.appUrl}/c/${consultantShortCode}`,
-      clientLink: `${env.appUrl}/s/${shortCode}`,
+      link: `${env.clientUrl}/acompanhar/${consultantShortCode}`,
+      clientLink: `${env.clientUrl}/coleta/${shortCode}`,
       expiresAt: collection.expiresAt,
     });
   })

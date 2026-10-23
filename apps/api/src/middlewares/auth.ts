@@ -15,8 +15,12 @@ export async function requireCollectionToken(req: Request, _res: Response, next:
   const { token } = req.params;
   if (!token) return next(Errors.unauthorized("Link inválido."));
 
+  // Aceita tanto o código curto (novo padrão da URL, ex: /coleta/AbCd1234) quanto
+  // o token longo antigo (base64url, pra não quebrar links já compartilhados).
   const tokenHash = hashToken(token);
-  const collection = await prisma.collectionRequest.findUnique({ where: { tokenHash } });
+  const collection = await prisma.collectionRequest.findFirst({
+    where: { OR: [{ shortCode: token }, { tokenHash }] },
+  });
 
   if (!collection) return next(Errors.notFound("Link de coleta não encontrado."));
   if (collection.status === "CANCELLED") return next(Errors.forbidden("Este link foi revogado."));
@@ -33,7 +37,9 @@ export async function requireConsultantToken(req: Request, _res: Response, next:
   if (!token) return next(Errors.unauthorized("Link inválido."));
 
   const tokenHash = hashToken(token);
-  const collection = await prisma.collectionRequest.findUnique({ where: { consultantTokenHash: tokenHash } });
+  const collection = await prisma.collectionRequest.findFirst({
+    where: { OR: [{ consultantShortCode: token }, { consultantTokenHash: tokenHash }] },
+  });
 
   if (!collection) return next(Errors.notFound("Link de acompanhamento não encontrado."));
   if (collection.status === "CANCELLED") return next(Errors.forbidden("Este link foi revogado."));
